@@ -1,0 +1,26 @@
+# Every mutant that survives the whole suite has to be killed by a real behavioral test, or
+# explained here - never silently accepted. scripts/check_mutants.py enforces this.
+#
+# The bar for an entry: nothing the app *does* can differ with the mutation in place - not a
+# response, a row written, a query issued, an error raised. "Awkward to test" doesn't qualify, and
+# neither does a test that only asserts what arguments a call received.
+#
+# Keyed by a single mutant - or by a function, covering every mutant of it, including ones added
+# later, so prefer the single mutant. Quoted, because the name is dotted:
+#
+#   ["app.controllers.cards.x_move_card__mutmut_12"]
+#   fingerprint = "<scripts.mutation_fingerprint.fingerprint(name)>"
+#   reason = """Why nothing the app does can differ with this mutant in place."""
+#
+# `fingerprint` hashes the function's AST. A mutant's number is its position inside its function,
+# so editing the function reshuffles them and the entry would silently start excusing a different
+# mutation - the check fails until the entry is re-read and its fingerprint updated:
+#   uv run python -c "from scripts.mutation_fingerprint import fingerprint; print(fingerprint('<name>'))"
+
+["app.db.x__enforce_foreign_keys__mutmut_4"]
+fingerprint = "76416cf112a6"
+reason = """SQLite treats pragma names and their ON/on values case-insensitively, so the mutated statement switches on exactly the same foreign-key enforcement as the original."""
+
+["app.db.x__enforce_foreign_keys__mutmut_5"]
+fingerprint = "76416cf112a6"
+reason = """SQLite treats pragma names and their ON/on values case-insensitively, so the mutated statement switches on exactly the same foreign-key enforcement as the original."""

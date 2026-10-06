@@ -1,0 +1,162 @@
+/* Hallmark · custom theme · genre: modern-minimal (app UI) · sibling of brennkonto
+ * vibe: "ink-blue ledger, sharp paper on a slate desk, one marigold signal"
+ * paper oklch(98.5% 0.004 95) · accent oklch(48% 0.19 264) ultramarine · signal oklch(80% 0.15 80) marigold
+ * fonts: Schibsted Grotesk (display) + General Sans (body, shared with brennkonto) + Geist Mono (dates, counts)
+ * axes: light+dark / grotesk-sans / cool (vs brennkonto: light+dark / grotesk-sans / chromatic-green)
+ * surfaces: --color-bg (the desk) < --color-paper (the board sheet) < --color-paper-2 (a lane) < cards (paper again, inked edge)
+ */
+
+:root {
+  color-scheme: light;
+
+  --color-bg: oklch(88% 0.012 250);
+  --color-paper: oklch(98.5% 0.004 95);
+  --color-paper-2: oklch(95.5% 0.007 250);
+  --color-paper-3: oklch(92% 0.01 250);
+  --color-rule: oklch(84% 0.014 250);
+  --color-neutral: oklch(47% 0.022 258);
+  --color-muted: oklch(60% 0.016 258);
+  --color-ink: oklch(21% 0.03 262);
+  /* the inked outline on cards, nav, dialogs - the ink itself in light, a step down in dark */
+  --color-edge: var(--color-ink);
+
+  /* -- accent: ultramarine, the one colour that means "act" -- */
+  --color-accent: oklch(48% 0.19 264);
+  --color-accent-ink: oklch(98% 0.01 264);
+  --color-accent-soft: oklch(93% 0.035 264);
+  --color-focus: oklch(55% 0.2 264);
+
+  /* -- signal: marigold, reserved for "due today" -- */
+  --color-signal: oklch(80% 0.15 80);
+  --color-signal-ink: oklch(24% 0.04 70);
+  --color-signal-soft: oklch(94% 0.05 85);
+
+  --color-negative: oklch(53% 0.19 27);
+  --color-negative-ink: oklch(98% 0.01 27);
+  --color-negative-soft: oklch(94% 0.04 27);
+  --color-positive: oklch(52% 0.12 155);
+  --color-positive-soft: oklch(94% 0.04 155);
+
+  --color-scrim: oklch(21% 0.03 262 / 0.42);
+
+  /* -- type -- */
+  --font-display: 'Schibsted Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'General Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', monospace;
+
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-md: 1.25rem;
+  --text-lg: 1.5625rem;
+  --text-xl: 1.9531rem;
+  --text-display: clamp(2rem, 1.4rem + 2.4vw, 3rem);
+
+  --control-h: 2.75rem;
+  --control-h-sm: 2.25rem;
+
+  /* -- space: 4pt scale -- */
+  --space-3xs: 0.25rem;
+  --space-2xs: 0.5rem;
+  --space-xs: 0.75rem;
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2rem;
+  --space-xl: 3rem;
+  --space-2xl: 4rem;
+
+  --lane-w: 18.5rem;
+  --shell-w: 78rem;
+
+  /* -- corners: sharp, like brennkonto -- */
+  --radius: 0px;
+  --rule-w: 1.5px;
+
+  /* -- motion -- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.87, 0, 0.13, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+
+  /* hard offset shadows, no blur - lifted paper, not glowing glass */
+  --shadow-float: 4px 4px 0 0 var(--color-ink);
+  --shadow-lift: 3px 3px 0 0 var(--color-ink);
+  --shadow-press: 1px 1px 0 0 var(--color-ink);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --color-bg: oklch(12% 0.016 262);
+    --color-paper: oklch(18% 0.02 262);
+    --color-paper-2: oklch(21.5% 0.022 262);
+    --color-paper-3: oklch(26% 0.024 262);
+    --color-rule: oklch(34% 0.026 262);
+    --color-neutral: oklch(72% 0.02 255);
+    --color-muted: oklch(58% 0.018 255);
+    --color-ink: oklch(95% 0.008 95);
+    --color-edge: oklch(56% 0.03 262);
+
+    --color-accent: oklch(70% 0.15 264);
+    --color-accent-ink: oklch(15% 0.03 264);
+    --color-accent-soft: oklch(30% 0.07 264);
+    --color-focus: oklch(74% 0.15 264);
+
+    --color-signal: oklch(82% 0.14 80);
+    --color-signal-ink: oklch(20% 0.03 70);
+    --color-signal-soft: oklch(31% 0.06 80);
+
+    --color-negative: oklch(68% 0.17 27);
+    --color-negative-ink: oklch(15% 0.03 27);
+    --color-negative-soft: oklch(30% 0.07 27);
+    --color-positive: oklch(70% 0.13 155);
+    --color-positive-soft: oklch(28% 0.05 155);
+
+    --color-scrim: oklch(5% 0.01 262 / 0.62);
+
+    --shadow-float: 4px 4px 0 0 var(--color-rule);
+    --shadow-lift: 3px 3px 0 0 oklch(6% 0.01 262);
+    --shadow-press: 1px 1px 0 0 oklch(6% 0.01 262);
+  }
+}
+
+/* Manual override from Settings > Appearance. "Auto" sets no attribute and leaves the media query
+   above in charge; its :not([data-theme='light']) guard is what lets "Light" win on a dark OS. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-bg: oklch(12% 0.016 262);
+  --color-paper: oklch(18% 0.02 262);
+  --color-paper-2: oklch(21.5% 0.022 262);
+  --color-paper-3: oklch(26% 0.024 262);
+  --color-rule: oklch(34% 0.026 262);
+  --color-neutral: oklch(72% 0.02 255);
+  --color-muted: oklch(58% 0.018 255);
+  --color-ink: oklch(95% 0.008 95);
+  --color-edge: oklch(56% 0.03 262);
+
+  --color-accent: oklch(70% 0.15 264);
+  --color-accent-ink: oklch(15% 0.03 264);
+  --color-accent-soft: oklch(30% 0.07 264);
+  --color-focus: oklch(74% 0.15 264);
+
+  --color-signal: oklch(82% 0.14 80);
+  --color-signal-ink: oklch(20% 0.03 70);
+  --color-signal-soft: oklch(31% 0.06 80);
+
+  --color-negative: oklch(68% 0.17 27);
+  --color-negative-ink: oklch(15% 0.03 27);
+  --color-negative-soft: oklch(30% 0.07 27);
+  --color-positive: oklch(70% 0.13 155);
+  --color-positive-soft: oklch(28% 0.05 155);
+
+  --color-scrim: oklch(5% 0.01 262 / 0.62);
+
+  --shadow-float: 4px 4px 0 0 var(--color-rule);
+  --shadow-lift: 3px 3px 0 0 oklch(6% 0.01 262);
+  --shadow-press: 1px 1px 0 0 oklch(6% 0.01 262);
+}

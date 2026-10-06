@@ -1,0 +1,173 @@
+import type { ReactNode } from 'react'
+
+import { act, renderHook, waitFor } from '@testing-library/react'
+import { renderToString } from 'react-dom/server'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { ApiError, NetworkError } from '../../src/api/client'
+import * as endpoints from '../../src/api/endpoints'
+import type { User } from '../../src/api/types'
+import { AuthProvider, useAuth } from '../../src/hooks/useAuth'
+
+vi.mock('../../src/api/endpoints')
+
+const user: User = {
+  id: '1',
+  email: 'ada@acta.local',
+  display_name: 'Demo',
+}
+
+function wrapper({ children }: { children: ReactNode }) {
+  return <AuthProvider>{children}</AuthProvider>
+}
+
+beforeEach(() => {
+  vi.mocked(endpoints.fetchCurrentUser).mockReset()
+  vi.mocked(endpoints.login).mockReset()
+  vi.mocked(endpoints.register).mockReset()
+  vi.mocked(endpoints.logout).mockReset()
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
+describe('useAuth', () => {
+  it('throws when used outside an AuthProvider', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(() => renderHook(() => useAuth())).toThrow('useAuth must be used within an AuthProvider')
+    spy.mockRestore()
+  })
+
+  it('loads the current user on mount', async () => {
+    vi.mocked(endpoints.fetchCurrentUser).mockResolvedValue(user)
+    const { result } = renderHook(() => useAuth(), { wrapper })
+
+    expect(result.current.isLoading).toBe(true)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.user).toEqual(user)
+  })
+
+  it('silently treats a 401 on mount as logged-out', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.mocked(endpoints.fetchCurrentUser).mockRejectedValue(new ApiError('Not authorized', 401))
+    const { result } = renderHook(() => useAuth(), { wrapper })
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.user).toBeNull()
+    expect(spy).not.toHaveBeenCalled()
+  })
+
+  it('logs unexpected errors on mount', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.mocked(endpoints.fetchCurrentUser).mockRejectedValue(new Error('network down'))
+    const { result } = renderHook(() => useAuth(), { wrapper })
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.user).toBeNull()
+    expect(spy).toHaveBeenCalled()
+  })
+
+  it("sets isOffline, without logging, when the initial check can't reach the server", async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.mocked(endpoints.fetchCurrentUser).mockRejectedValue(new NetworkError())
+    const { result } = renderHook(() => useAuth(), { wrapper })
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.isOffline).toBe(true)
+    expect(result.current.user).toBeNull()
+    expect(spy).not.toHaveBeenCalled()
+  })
+
+  it('retryConnection re-runs the check and clears isOffline on success', async () => {
+    vi.mocked(endpoints.fetchCurrentUser).mockRejectedValueOnce(new NetworkError())
+    const { result } = renderHook(() => useAuth(), { wrapper })
+    await waitFor(() => expect(result.current.isOffline).toBe(true))
+
+    vi.mocked(endpoints.fetchCurrentUser).mockResolvedValueOnce(user)
+    act(() => {
+      result.current.retryConnection()
+    })
+    expect(result.current.isLoading).toBe(true)
+    expect(result.current.isOffline).toBe(false)
+
+    await waitFor(() => expect(result.current.user).toEqual(user))
+    expect(result.current.isOffline).toBe(false)
+  })
+
+  it('login sets the user', async () => {
+    vi.mocked(endpoints.fetchCurrentUser).mockRejectedValue(new ApiError('Not authorized', 401))
+    vi.mocked(endpoints.login).mockResolvedValue(user)
+    const { result } = renderHook(() => useAuth(), { wrapper })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    await act(async () => {
+      await result.current.login('ada@acta.local', 'password')
+    })
+    expect(endpoints.login).toHaveBeenCalledWith('ada@acta.local', 'password')
+    expect(result.current.user).toEqual(user)
+  })
+
+  it('register sets the user', async () => {
+    vi.mocked(endpoints.fetchCurrentUser).mockRejectedValue(new ApiError('Not authorized', 401))
+    vi.mocked(endpoints.register).mockResolvedValue(user)
+    const { result } = renderHook(() => useAuth(), { wrapper })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    await act(async () => {
+      await result.current.register('ada@acta.local', 'password', 'Demo')
+    })
+    expect(endpoints.register).toHaveBeenCalledWith('ada@acta.local', 'password', 'Demo')
+    expect(result.current.user).toEqual(user)
+  })
+
+  it('logout clears the user', async () => {
+    vi.mocked(endpoints.fetchCurrentUser).mockResolvedValue(user)
+    vi.mocked(endpoints.logout).mockResolvedValue(undefined)
+    const { result } = renderHook(() => useAuth(), { wrapper })
+    await waitFor(() => expect(result.current.user).toEqual(user))
+
+    await act(async () => {
+      await result.current.logout()
+    })
+    expect(endpoints.logout).toHaveBeenCalled()
+    expect(result.current.user).toBeNull()
+  })
+
+  it('setUser updates the user directly', async () => {
+    vi.mocked(endpoints.fetchCurrentUser).mockResolvedValue(user)
+    const { result } = renderHook(() => useAuth(), { wrapper })
+    await waitFor(() => expect(result.current.user).toEqual(user))
+
+    const updated = { ...user, display_name: 'Updated' }
+    act(() => {
+      result.current.setUser(updated)
+    })
+    expect(result.current.user).toEqual(updated)
+  })
+
+  it('starts out loading and online, before the first check has even started', () => {
+    // A server render runs no effects - it's the first frame, which is what a route guard sees
+    // before deciding whether to redirect.
+    function Probe() {
+      const { isLoading, isOffline } = useAuth()
+      return <span>{`${isLoading}/${isOffline}`}</span>
+    }
+    expect(
+      renderToString(
+        <AuthProvider>
+          <Probe />
+        </AuthProvider>
+      )
+    ).toBe('<span>true/false</span>')
+  })
+
+  it('logs an API error that is not a 401', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const error = new ApiError('Server error', 500)
+    vi.mocked(endpoints.fetchCurrentUser).mockRejectedValue(error)
+    const { result } = renderHook(() => useAuth(), { wrapper })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(spy).toHaveBeenCalledWith(error)
+  })
+})

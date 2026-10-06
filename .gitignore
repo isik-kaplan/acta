@@ -1,0 +1,31 @@
+.claude/
+.idea/
+.hallmark/
+
+# env
+.env
+
+# python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+backend/mutants/
+backend/tests/data/
+
+# node
+node_modules/
+frontend/dist/
+frontend/dev-dist/
+frontend/coverage/
+frontend/reports/
+frontend/.stryker-tmp/
+
+# runtime data
+backend/data/
+backend/static/
+*.sqlite3
