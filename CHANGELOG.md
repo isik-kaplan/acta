@@ -29,5 +29,5 @@ First version.
 
 ### Development
 
-- 100% coverage gates on both halves, plus mutation testing: mutmut for the backend and Stryker for the frontend, where every mutant has to be killed by a test or exempted with a reason nothing the app does can differ. Tests run in CI on every push to master and on pull requests; mutation testing runs by hand and weekly (`.github/workflows/mutation.yml`).
+- 100% coverage gates on both halves, plus mutation testing: mutmut for the backend and Stryker for the frontend, where every mutant has to be killed by a test or exempted with a reason nothing the app does can differ. Tests run in CI on every push to master and on pull requests; mutation testing on every push to master (`.github/workflows/mutation.yml`).
 - Pre-commit hooks for ruff, eslint, prettier and tsc.

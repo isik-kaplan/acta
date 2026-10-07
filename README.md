@@ -121,7 +121,7 @@ A frontend exemption is a `// Stryker disable next-line <mutator>: <reason>` com
 the code it covers. `stryker-plugins/ignore-equivalent.mjs` ignores two classes outright: fixed
 `className`/`style` values (jsdom lays nothing out) and empty hook dependency lists.
 
-Both also run in CI - by hand, and weekly - via `.github/workflows/mutation.yml`.
+Both also run in CI on every push to master (and by hand) via `.github/workflows/mutation.yml`.
 
 ## Pre-commit
 
