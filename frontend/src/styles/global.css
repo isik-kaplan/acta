@@ -822,45 +822,6 @@ textarea.input {
   min-width: 0;
 }
 
-@media (max-width: 768px) {
-  .board {
-    padding-top: var(--space-sm);
-  }
-
-  .board__header,
-  .board > .banner {
-    padding: 0 var(--space-sm);
-  }
-
-  /* one swipeable row on a phone, rather than a wall of chips pushing the lanes down */
-  .label-filter {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding: 0 var(--space-sm) var(--space-3xs);
-    scrollbar-width: none;
-  }
-
-  .label-filter .label-toggle,
-  .label-filter .segmented,
-  .label-filter .btn {
-    flex-shrink: 0;
-    white-space: nowrap;
-  }
-
-  .board > .banner {
-    margin-left: var(--space-sm);
-    margin-right: var(--space-sm);
-    width: auto;
-    padding: var(--space-xs) var(--space-sm);
-  }
-
-  /* the first lane lines up with the header; the last can still scroll fully into view */
-  .lanes {
-    padding: 0 var(--space-sm) var(--space-sm);
-    scroll-padding: 0 var(--space-sm);
-  }
-}
-
 .board__header {
   display: flex;
   align-items: baseline;
@@ -1199,6 +1160,59 @@ h2.lane__name {
   gap: var(--space-2xs);
   overflow-y: auto;
   min-height: var(--space-md);
+}
+
+/* Phone layout for the board - after its general rules above, which would otherwise win. */
+@media (max-width: 768px) {
+  .board {
+    padding-top: var(--space-sm);
+  }
+
+  .board__header,
+  .board > .banner {
+    padding: 0 var(--space-sm);
+  }
+
+  /* The name gets a line of its own, with the count and the buttons on the line below it - beside
+   * them it would be squeezed into a narrow column and break mid-word. */
+  .board__header {
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: var(--space-xs);
+  }
+
+  .board__header > :first-child {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+
+  /* one swipeable row on a phone, rather than a wall of chips pushing the lanes down */
+  .label-filter {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 0 var(--space-sm) var(--space-3xs);
+    scrollbar-width: none;
+  }
+
+  .label-filter .label-toggle,
+  .label-filter .segmented,
+  .label-filter .btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .board > .banner {
+    margin-left: var(--space-sm);
+    margin-right: var(--space-sm);
+    width: auto;
+    padding: var(--space-xs) var(--space-sm);
+  }
+
+  /* the first lane lines up with the header; the last can still scroll fully into view */
+  .lanes {
+    padding: 0 var(--space-sm) var(--space-sm);
+    scroll-padding: 0 var(--space-sm);
+  }
 }
 
 /* ---------- card tile ---------- */
