@@ -3,16 +3,32 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import KanbanBoard, { preferCards } from '../../src/components/KanbanBoard'
+import type { FilterMatch } from '../../src/lib/labels'
 import { makeActions } from '../testUtils/actions'
 import { drag, hold, layOutBoard, release, touchDrag } from '../testUtils/dragAndDrop'
-import { makeBoard } from '../testUtils/fixtures'
+import { makeBoard, makeLabelledBoard } from '../testUtils/fixtures'
 
 const NOW = new Date('2026-10-06T12:00:00Z')
 
-function renderBoard(actions = makeActions(), onOpenCard = vi.fn()) {
-  const view = render(<KanbanBoard board={makeBoard()} now={NOW} actions={actions} onOpenCard={onOpenCard} />)
+function renderBoard(
+  actions = makeActions(),
+  onOpenCard = vi.fn(),
+  { isEditing = true, board = makeBoard(), filter = [] as string[], match = 'any' as FilterMatch } = {}
+) {
+  const onAddCard = vi.fn()
+  const view = render(
+    <KanbanBoard
+      board={board}
+      isEditing={isEditing}
+      filter={{ labels: filter, match }}
+      now={NOW}
+      actions={actions}
+      onOpenCard={onOpenCard}
+      onAddCard={onAddCard}
+    />
+  )
   layOutBoard(view.container)
-  return { ...view, actions, onOpenCard }
+  return { ...view, actions, onOpenCard, onAddCard }
 }
 
 const tile = (title: string) => screen.getByText(title).closest('li')!
@@ -54,8 +70,28 @@ describe('KanbanBoard', () => {
     await user.type(screen.getByRole('textbox', { name: 'New column' }), 'Later{Enter}')
     expect(actions.addColumn).toHaveBeenCalledWith('Later')
     expect(screen.getByRole('textbox', { name: 'New column' }).tagName).toBe('INPUT')
-    expect(screen.getByRole('textbox', { name: 'New column' })).toHaveAttribute('maxlength', '120')
+    expect(screen.getByRole('textbox', { name: 'New column' })).not.toHaveAttribute('maxlength')
     expect(screen.getByRole('textbox', { name: 'New column' })).toHaveAttribute('placeholder', 'Column name')
+  })
+
+  it('out of edit mode, shows plain column names with no column controls', () => {
+    renderBoard(makeActions(), vi.fn(), { isEditing: false })
+    expect(screen.getByRole('heading', { name: 'To do' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'To do' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'To do options' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Add a column' })).toBeNull()
+    expect(screen.getAllByRole('button', { name: 'Add a card' })).toHaveLength(3)
+  })
+
+  it('offers to add a column on a board that has none, even out of edit mode', () => {
+    renderBoard(makeActions(), vi.fn(), { isEditing: false, board: { ...makeBoard(), columns: [] } })
+    expect(screen.getByRole('button', { name: 'Add a column' })).toBeInTheDocument()
+  })
+
+  it('asks for a new card in the column whose button was pressed', async () => {
+    const { onAddCard } = renderBoard()
+    await userEvent.click(within(lane('Doing')).getByRole('button', { name: 'Add a card' }))
+    expect(onAddCard).toHaveBeenCalledWith('doing')
   })
 
   it('opens a card when clicked', async () => {
@@ -149,5 +185,43 @@ describe('preferCards', () => {
 
   it('falls back to overlap when the pointer is over nothing', () => {
     expect(preferCards(args(['column:todo'], { x: 500, y: 500 })).map((hit) => hit.id)).toEqual(['column:todo'])
+  })
+})
+
+describe('KanbanBoard with labels', () => {
+  it('filters every lane by the same labels, and shows labels on the cards', () => {
+    renderBoard(makeActions(), vi.fn(), { board: makeLabelledBoard(), filter: ['l-errand'] })
+    expect(
+      within(lane('To do'))
+        .getAllByRole('listitem')
+        .map((item) => item.getAttribute('data-card-id'))
+    ).toEqual(['b'])
+    expect(
+      within(lane('Doing'))
+        .getAllByRole('listitem')
+        .map((item) => item.getAttribute('data-card-id'))
+    ).toEqual(['d'])
+    expect(within(tile('B')).getByText('Home')).toHaveClass('label-chip')
+  })
+
+  it('shows only cards with every filtered label when matching all', () => {
+    renderBoard(makeActions(), vi.fn(), { board: makeLabelledBoard(), filter: ['l-home', 'l-errand'], match: 'all' })
+    expect([...document.querySelectorAll('[data-card-id]')].map((item) => item.getAttribute('data-card-id'))).toEqual([
+      'b',
+    ])
+  })
+
+  it("places a dragged card among all of a column's cards, hidden ones too", async () => {
+    const { actions } = renderBoard(makeActions(), vi.fn(), { board: makeLabelledBoard(), filter: ['l-errand'] })
+    await drag(tile('D'), lane('To do'))
+    expect(actions.moveCard).toHaveBeenCalledWith('d', { columnId: 'todo', index: 3 })
+  })
+
+  it('lifts a labelled card with its labels showing', async () => {
+    renderBoard(makeActions(), vi.fn(), { board: makeLabelledBoard() })
+    const source = tile('A')
+    hold(source, tile('B'))
+    expect(document.querySelector('.card-tile--lifted')).toHaveTextContent(/^AUrgent$/)
+    await release(source)
   })
 })

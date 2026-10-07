@@ -3,23 +3,46 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
-import type { Column } from '../../src/api/types'
+import type { Column, Label } from '../../src/api/types'
 import Lane from '../../src/components/Lane'
+import type { FilterMatch } from '../../src/lib/labels'
 import { makeActions } from '../testUtils/actions'
-import { card } from '../testUtils/fixtures'
+import { LABELS, card } from '../testUtils/fixtures'
 
 const NOW = new Date('2026-10-06T12:00:00Z')
 
-function renderLane(column: Column, { isFirst = false, isLast = false } = {}) {
+function renderLane(
+  column: Column,
+  {
+    isFirst = false,
+    isLast = false,
+    isEditing = true,
+    labels = [] as Label[],
+    filter = [] as string[],
+    match = 'any' as FilterMatch,
+  } = {}
+) {
   const actions = makeActions()
   const onOpenCard = vi.fn()
+  const onAddCard = vi.fn()
   render(
     // No sensors: these tests are about the tile, not dragging it (KanbanBoard.test covers that).
     <DndContext sensors={[]}>
-      <Lane column={column} isFirst={isFirst} isLast={isLast} now={NOW} actions={actions} onOpenCard={onOpenCard} />
+      <Lane
+        column={column}
+        labels={labels}
+        filter={{ labels: filter, match }}
+        isEditing={isEditing}
+        isFirst={isFirst}
+        isLast={isLast}
+        now={NOW}
+        actions={actions}
+        onAddCard={onAddCard}
+        onOpenCard={onOpenCard}
+      />
     </DndContext>
   )
-  return { actions, onOpenCard }
+  return { actions, onOpenCard, onAddCard }
 }
 
 const doing = (count: number): Column => ({
@@ -42,6 +65,14 @@ describe('Lane', () => {
     expect(lane).toHaveAttribute('data-column-id', 'doing')
     expect(screen.getByLabelText('2 cards')).toHaveTextContent('2')
     expect(screen.getAllByRole('listitem')).toHaveLength(2)
+  })
+
+  it('out of edit mode, shows the name as a heading with no rename or menu', () => {
+    renderLane(doing(2), { isEditing: false })
+    expect(screen.getByRole('heading', { level: 2, name: 'Doing' })).toHaveClass('lane__name')
+    expect(screen.queryByRole('button', { name: 'Doing' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Doing options' })).toBeNull()
+    expect(screen.getByLabelText('2 cards')).toBeInTheDocument()
   })
 
   it('counts a single card in the singular', () => {
@@ -100,20 +131,42 @@ describe('Lane', () => {
     expect(actions.deleteColumn).not.toHaveBeenCalled()
   })
 
-  it('adds cards to this column from a multi-line composer', async () => {
-    const { actions } = renderLane(doing(0))
+  it('asks to add a card to this column', async () => {
+    const { onAddCard, actions } = renderLane(doing(0), { isEditing: false })
     await userEvent.click(screen.getByRole('button', { name: 'Add a card' }))
-    const field = screen.getByRole('textbox', { name: 'New card' })
-    expect(field.tagName).toBe('TEXTAREA')
-    expect(field).toHaveAttribute('maxlength', '200')
-    expect(field).toHaveAttribute('placeholder', 'What needs doing?')
-    await userEvent.type(field, 'Water plants{Enter}')
-    expect(actions.addCard).toHaveBeenCalledWith('doing', 'Water plants')
+    expect(onAddCard).toHaveBeenCalledWith('doing')
+    expect(actions.addCard).not.toHaveBeenCalled()
   })
 
   it('opens a card', async () => {
     const { onOpenCard } = renderLane(doing(1))
     await userEvent.click(screen.getByRole('button', { name: 'K0' }))
     expect(onOpenCard).toHaveBeenCalledWith('k0')
+  })
+})
+
+describe('Lane with a label filter', () => {
+  const mixed: Column = {
+    id: 'todo',
+    name: 'To do',
+    position: 0,
+    cards: [
+      card('k0', 'todo', 0, { labels: ['l-home'] }),
+      card('k1', 'todo', 1, { labels: ['l-urgent'] }),
+      card('k2', 'todo', 2),
+    ],
+  }
+
+  it('shows only the cards with a filtered label, and how many of all', () => {
+    renderLane(mixed, { labels: LABELS, filter: ['l-home'] })
+    expect(screen.getAllByRole('listitem').map((item) => item.getAttribute('data-card-id'))).toEqual(['k0'])
+    expect(screen.getByLabelText('1 of 3 cards shown')).toHaveTextContent(/^1\/3$/)
+    expect(screen.getByText('Home')).toHaveClass('label-color--green')
+  })
+
+  it('shows the plain count when the filter hides nothing', () => {
+    renderLane({ ...mixed, cards: mixed.cards.slice(0, 2) }, { labels: LABELS, filter: ['l-home', 'l-urgent'] })
+    expect(screen.getAllByRole('listitem')).toHaveLength(2)
+    expect(screen.getByLabelText('2 cards')).toHaveTextContent(/^2$/)
   })
 })

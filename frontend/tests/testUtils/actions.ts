@@ -14,6 +14,9 @@ export function makeActions(overrides: Partial<BoardActions> = {}): BoardActions
     moveColumn: vi.fn().mockResolvedValue(true),
     deleteColumn: vi.fn().mockResolvedValue(true),
     renameBoard: vi.fn().mockResolvedValue(true),
+    addLabel: vi.fn(async (name: string) => ({ id: `new-${name}`, name, color: 'blue' as const })),
+    saveLabel: vi.fn().mockResolvedValue(true),
+    deleteLabel: vi.fn().mockResolvedValue(true),
     ...overrides,
   }
 }

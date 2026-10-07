@@ -1,5 +1,15 @@
 import { api } from './client'
-import type { Board, BoardSummary, Card, CardFields, Column, PushSubscriptionJSON, User } from './types'
+import type {
+  Board,
+  BoardSummary,
+  Card,
+  CardFields,
+  Column,
+  Label,
+  LabelColor,
+  PushSubscriptionJSON,
+  User,
+} from './types'
 
 export const fetchCurrentUser = () => api.get<User>('/auth/me')
 export const login = (email: string, password: string) => api.post<User>('/auth/login', { email, password })
@@ -25,6 +35,13 @@ export const updateCard = (cardId: string, fields: CardFields) => api.put<Card>(
 export const moveCard = (cardId: string, columnId: string, index: number) =>
   api.post<Card>(`/cards/${cardId}/move`, { column_id: columnId, index })
 export const deleteCard = (cardId: string) => api.delete<void>(`/cards/${cardId}`)
+
+// Without a colour the server picks the one the board has used least.
+export const createLabel = (boardId: string, name: string, color?: LabelColor) =>
+  api.post<Label>(`/boards/${boardId}/labels`, color ? { name, color } : { name })
+export const updateLabel = (labelId: string, name: string, color: LabelColor) =>
+  api.put<Label>(`/labels/${labelId}`, { name, color })
+export const deleteLabel = (labelId: string) => api.delete<void>(`/labels/${labelId}`)
 
 export const fetchPushKey = () => api.get<{ public_key: string }>('/push/public-key')
 export const savePushSubscription = (subscription: PushSubscriptionJSON) =>

@@ -4,7 +4,7 @@ from litestar.response import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import hash_password, verify_password
+from app.auth import hash_password, session_for, verify_password
 from app.config import settings
 from app.models import Board, User
 from app.schemas import LoginRequest, RegisterRequest, UserOut
@@ -37,16 +37,22 @@ async def register(data: RegisterRequest, request: Request, db_session: AsyncSes
     await db_session.flush()
     add_default_columns(db_session, board)
     await db_session.commit()
-    request.set_session({"user_id": str(user.id)})
+    request.set_session(session_for(user))
     return user_out(user)
+
+
+# Checked against when the email is unknown, so a wrong email takes as long to refuse as a wrong
+# password - otherwise the time to answer would tell which emails have accounts.
+_UNKNOWN_USER_HASH = hash_password("no account has this password")
 
 
 @post("/login")
 async def login(data: LoginRequest, request: Request, db_session: AsyncSession) -> UserOut:
     user = await db_session.scalar(select(User).where(User.email == _normalized_email(data.email)))
-    if user is None or not verify_password(data.password, user.password_hash):
+    password_hash = _UNKNOWN_USER_HASH if user is None else user.password_hash
+    if not verify_password(data.password, password_hash) or user is None:
         raise NotAuthorizedException("Invalid email or password.")
-    request.set_session({"user_id": str(user.id)})
+    request.set_session(session_for(user))
     return user_out(user)
 
 

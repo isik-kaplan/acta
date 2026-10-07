@@ -2,7 +2,7 @@ from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from pathlib import Path
 
-from sqlalchemy import DateTime, TypeDecorator, event
+from sqlalchemy import Connection, DateTime, TypeDecorator, event, inspect, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
@@ -54,11 +54,44 @@ engine = _make_engine()
 session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
 
+def _add_card_summary_column_if_missing(connection: Connection) -> None:
+    # create_all never alters a table that already exists, so a database from before cards had a
+    # summary needs it added here instead of through a full migration framework.
+    columns = {column["name"] for column in inspect(connection).get_columns("cards")}
+    if "summary" not in columns:
+        connection.execute(text("ALTER TABLE cards ADD COLUMN summary TEXT NOT NULL DEFAULT ''"))
+
+
+def _move_reminded_at_to_card_reminders(connection: Connection) -> None:
+    # Cards once had a single at-the-due-time reminder, tracked by cards.reminded_at. Each dated
+    # card keeps that as a 0-minutes-before reminder (already sent if it had been), and the old
+    # column goes. Runs after create_all, so card_reminders exists by now.
+    columns = {column["name"] for column in inspect(connection).get_columns("cards")}
+    if "reminded_at" not in columns:
+        return
+    connection.execute(
+        text(
+            "INSERT INTO card_reminders (id, card_id, minutes_before, sent_at) "
+            "SELECT lower(hex(randomblob(16))), id, 0, reminded_at FROM cards WHERE due_at IS NOT NULL"
+        )
+    )
+    connection.execute(text("ALTER TABLE cards DROP COLUMN reminded_at"))
+
+
+def _add_session_version_column_if_missing(connection: Connection) -> None:
+    columns = {column["name"] for column in inspect(connection).get_columns("users")}
+    if "session_version" not in columns:
+        connection.execute(text("ALTER TABLE users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 0"))
+
+
 async def create_tables() -> None:
     import app.models  # noqa: F401 - registers the tables on Base.metadata
 
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
+        await connection.run_sync(_add_card_summary_column_if_missing)
+        await connection.run_sync(_move_reminded_at_to_card_reminders)
+        await connection.run_sync(_add_session_version_column_if_missing)
 
 
 async def get_db_session() -> AsyncIterator[AsyncSession]:

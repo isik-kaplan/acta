@@ -4,45 +4,51 @@ import { describe, expect, it, vi } from 'vitest'
 
 import Composer from '../../src/components/Composer'
 
-function renderComposer(onSubmit = vi.fn().mockResolvedValue(true), multiline = false) {
-  render(
-    <Composer noun="card" placeholder="What needs doing?" maxLength={200} onSubmit={onSubmit} multiline={multiline} />
-  )
+function renderComposer(onSubmit = vi.fn().mockResolvedValue(true)) {
+  render(<Composer noun="column" placeholder="Column name" onSubmit={onSubmit} />)
   return onSubmit
 }
 
-const open = () => userEvent.click(screen.getByRole('button', { name: 'Add a card' }))
-const field = () => screen.getByRole('textbox', { name: 'New card' })
+const open = () => userEvent.click(screen.getByRole('button', { name: 'Add a column' }))
+const field = () => screen.getByRole('textbox', { name: 'New column' })
+const addButton = () => screen.getByRole('button', { name: 'Add column' })
 
 describe('Composer', () => {
-  it('starts collapsed and opens into a focused, empty field', async () => {
+  it('starts collapsed and opens into a focused, empty one-line field', async () => {
     renderComposer()
     expect(screen.queryByRole('textbox')).toBeNull()
     await open()
     expect(field()).toHaveFocus()
     expect(field()).toHaveValue('')
-    expect(field()).toHaveAttribute('placeholder', 'What needs doing?')
-    expect(field()).toHaveAttribute('maxlength', '200')
+    expect(field()).toHaveAttribute('placeholder', 'Column name')
+    expect(field()).not.toHaveAttribute('maxlength')
     expect(field().tagName).toBe('INPUT')
   })
 
   it('submits the trimmed value, then stays open and empty for the next one', async () => {
     const onSubmit = renderComposer()
     await open()
-    await userEvent.type(field(), '  Water plants  ')
-    expect(screen.getByRole('button', { name: 'Add card' })).toBeEnabled()
-    await userEvent.click(screen.getByRole('button', { name: 'Add card' }))
-    expect(onSubmit).toHaveBeenCalledWith('Water plants')
+    await userEvent.type(field(), '  Later  ')
+    expect(addButton()).toBeEnabled()
+    await userEvent.click(addButton())
+    expect(onSubmit).toHaveBeenCalledWith('Later')
     expect(field()).toHaveValue('')
-    expect(screen.getByRole('button', { name: 'Add card' })).toBeDisabled()
+    expect(addButton()).toBeDisabled()
+  })
+
+  it('submits on Enter', async () => {
+    const onSubmit = renderComposer()
+    await open()
+    await userEvent.type(field(), 'a{ArrowLeft}b{Enter}')
+    expect(onSubmit).toHaveBeenCalledWith('ba')
   })
 
   it('gives the text back when the add fails', async () => {
     const onSubmit = renderComposer(vi.fn().mockResolvedValue(false))
     await open()
-    await userEvent.type(field(), 'Water plants{Enter}')
+    await userEvent.type(field(), 'Later{Enter}')
     expect(onSubmit).toHaveBeenCalledTimes(1)
-    await vi.waitFor(() => expect(field()).toHaveValue('Water plants'))
+    await vi.waitFor(() => expect(field()).toHaveValue('Later'))
   })
 
   it("does not overwrite something new with a failed add's text", async () => {
@@ -55,29 +61,18 @@ describe('Composer', () => {
     await vi.waitFor(() => expect(field()).toHaveValue('second'))
   })
 
-  it('a multi-line field ignores Enter on blank text', async () => {
-    const onSubmit = renderComposer(vi.fn().mockResolvedValue(true), true)
-    await open()
-    await userEvent.type(field(), '   {Enter}')
-    expect(onSubmit).not.toHaveBeenCalled()
-    expect(field()).toHaveValue('   ')
-  })
-
   it('will not submit blank text', async () => {
     const onSubmit = renderComposer()
     await open()
-    expect(screen.getByRole('button', { name: 'Add card' })).toBeDisabled()
+    expect(addButton()).toBeDisabled()
     await userEvent.type(field(), '   {Enter}')
-    expect(screen.getByRole('button', { name: 'Add card' })).toBeDisabled()
+    expect(addButton()).toBeDisabled()
     expect(onSubmit).not.toHaveBeenCalled()
   })
 
   it('clears at once and queues adds typed while one is still saving, in order', async () => {
     const finishers: Array<(value: boolean) => void> = []
-    const onSubmit = renderComposer(
-      vi.fn(() => new Promise<boolean>((resolve) => finishers.push(resolve))),
-      true
-    )
+    const onSubmit = renderComposer(vi.fn(() => new Promise<boolean>((resolve) => finishers.push(resolve))))
     await open()
     await userEvent.type(field(), 'one{Enter}')
     expect(field()).toHaveValue('')
@@ -103,25 +98,5 @@ describe('Composer', () => {
     expect(screen.queryByRole('textbox')).toBeNull()
     await open()
     expect(field()).toHaveValue('')
-  })
-
-  it('is a textarea when multiline: Enter adds, Shift+Enter breaks the line', async () => {
-    const onSubmit = renderComposer(vi.fn().mockResolvedValue(true), true)
-    await open()
-    expect(field().tagName).toBe('TEXTAREA')
-    expect(field()).toHaveAttribute('rows', '2')
-    await userEvent.type(field(), 'line one{Shift>}{Enter}{/Shift}line two')
-    expect(field()).toHaveValue('line one\nline two')
-    expect(onSubmit).not.toHaveBeenCalled()
-    await userEvent.type(field(), '{Enter}')
-    expect(onSubmit).toHaveBeenCalledWith('line one\nline two')
-    expect(field()).toHaveValue('')
-  })
-
-  it('a single-line field submits on Enter through the form, and ignores other keys', async () => {
-    const onSubmit = renderComposer()
-    await open()
-    await userEvent.type(field(), 'a{ArrowLeft}b{Enter}')
-    expect(onSubmit).toHaveBeenCalledWith('ba')
   })
 })

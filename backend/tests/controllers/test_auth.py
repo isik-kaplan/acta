@@ -90,6 +90,34 @@ async def test_login_rejects_an_unknown_email(client) -> None:
     assert response.json()["detail"] == "Invalid email or password."
 
 
+async def test_an_unknown_email_costs_a_password_check_like_a_known_one(client, monkeypatch) -> None:
+    # The same work either way, so the time to answer doesn't give away which emails have accounts.
+    from app.controllers import auth
+
+    checked = []
+    real = auth.verify_password
+
+    def counting(password, password_hash):
+        checked.append(password_hash)
+        return real(password, password_hash)
+
+    monkeypatch.setattr(auth, "verify_password", counting)
+    await client.post("/api/auth/login", json={"email": "nobody@acta.local", "password": PASSWORD})
+    assert checked == [auth._UNKNOWN_USER_HASH]
+    assert checked[0].startswith("$argon2")
+
+
+async def test_the_unknown_user_hash_matches_no_ordinary_password(client) -> None:
+    # Even "the" password would be refused: there is no user to log in as.
+    from app.controllers import auth
+
+    response = await client.post(
+        "/api/auth/login", json={"email": "nobody@acta.local", "password": "no account has this password"}
+    )
+    assert auth.verify_password("no account has this password", auth._UNKNOWN_USER_HASH) is True
+    assert response.status_code == 401
+
+
 async def test_logout_clears_the_session(authed_client) -> None:
     response = await authed_client.post("/api/auth/logout")
     assert response.status_code == 204

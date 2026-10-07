@@ -1,0 +1,299 @@
+/* Label colours - generated once from a hue list, see tests/styles/labels.test.ts for the
+ * contrast check. Each name has a chip background, the text on it, and a solid swatch for the
+ * picker; the dark set swaps light-on-dark so a chip reads the same weight in either theme. */
+
+:root {
+  --label-rose-bg: oklch(93% 0.055 12);
+  --label-rose-ink: oklch(40% 0.13 12);
+  --label-rose-swatch: oklch(62% 0.16 12);
+  --label-red-bg: oklch(93% 0.055 27);
+  --label-red-ink: oklch(40% 0.13 27);
+  --label-red-swatch: oklch(62% 0.16 27);
+  --label-orange-bg: oklch(93% 0.055 50);
+  --label-orange-ink: oklch(40% 0.13 50);
+  --label-orange-swatch: oklch(62% 0.16 50);
+  --label-brown-bg: oklch(93% 0.025 55);
+  --label-brown-ink: oklch(40% 0.059 55);
+  --label-brown-swatch: oklch(62% 0.072 55);
+  --label-amber-bg: oklch(93% 0.055 75);
+  --label-amber-ink: oklch(40% 0.13 75);
+  --label-amber-swatch: oklch(62% 0.16 75);
+  --label-yellow-bg: oklch(93% 0.055 98);
+  --label-yellow-ink: oklch(40% 0.13 98);
+  --label-yellow-swatch: oklch(62% 0.16 98);
+  --label-lime-bg: oklch(93% 0.055 128);
+  --label-lime-ink: oklch(40% 0.13 128);
+  --label-lime-swatch: oklch(62% 0.16 128);
+  --label-green-bg: oklch(93% 0.055 148);
+  --label-green-ink: oklch(40% 0.13 148);
+  --label-green-swatch: oklch(62% 0.16 148);
+  --label-emerald-bg: oklch(93% 0.055 163);
+  --label-emerald-ink: oklch(40% 0.13 163);
+  --label-emerald-swatch: oklch(62% 0.16 163);
+  --label-teal-bg: oklch(93% 0.055 188);
+  --label-teal-ink: oklch(40% 0.13 188);
+  --label-teal-swatch: oklch(62% 0.16 188);
+  --label-cyan-bg: oklch(93% 0.055 208);
+  --label-cyan-ink: oklch(40% 0.13 208);
+  --label-cyan-swatch: oklch(62% 0.16 208);
+  --label-sky-bg: oklch(93% 0.055 232);
+  --label-sky-ink: oklch(40% 0.13 232);
+  --label-sky-swatch: oklch(62% 0.16 232);
+  --label-blue-bg: oklch(93% 0.055 258);
+  --label-blue-ink: oklch(40% 0.13 258);
+  --label-blue-swatch: oklch(62% 0.16 258);
+  --label-indigo-bg: oklch(93% 0.055 277);
+  --label-indigo-ink: oklch(40% 0.13 277);
+  --label-indigo-swatch: oklch(62% 0.16 277);
+  --label-violet-bg: oklch(93% 0.055 295);
+  --label-violet-ink: oklch(40% 0.13 295);
+  --label-violet-swatch: oklch(62% 0.16 295);
+  --label-purple-bg: oklch(93% 0.055 310);
+  --label-purple-ink: oklch(40% 0.13 310);
+  --label-purple-swatch: oklch(62% 0.16 310);
+  --label-fuchsia-bg: oklch(93% 0.055 328);
+  --label-fuchsia-ink: oklch(40% 0.13 328);
+  --label-fuchsia-swatch: oklch(62% 0.16 328);
+  --label-pink-bg: oklch(93% 0.055 350);
+  --label-pink-ink: oklch(40% 0.13 350);
+  --label-pink-swatch: oklch(62% 0.16 350);
+  --label-slate-bg: oklch(93% 0.01 255);
+  --label-slate-ink: oklch(40% 0.023 255);
+  --label-slate-swatch: oklch(62% 0.029 255);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --label-rose-bg: oklch(33% 0.065 12);
+    --label-rose-ink: oklch(89% 0.07 12);
+    --label-rose-swatch: oklch(70% 0.15 12);
+    --label-red-bg: oklch(33% 0.065 27);
+    --label-red-ink: oklch(89% 0.07 27);
+    --label-red-swatch: oklch(70% 0.15 27);
+    --label-orange-bg: oklch(33% 0.065 50);
+    --label-orange-ink: oklch(89% 0.07 50);
+    --label-orange-swatch: oklch(70% 0.15 50);
+    --label-brown-bg: oklch(33% 0.029 55);
+    --label-brown-ink: oklch(89% 0.032 55);
+    --label-brown-swatch: oklch(70% 0.068 55);
+    --label-amber-bg: oklch(33% 0.065 75);
+    --label-amber-ink: oklch(89% 0.07 75);
+    --label-amber-swatch: oklch(70% 0.15 75);
+    --label-yellow-bg: oklch(33% 0.065 98);
+    --label-yellow-ink: oklch(89% 0.07 98);
+    --label-yellow-swatch: oklch(70% 0.15 98);
+    --label-lime-bg: oklch(33% 0.065 128);
+    --label-lime-ink: oklch(89% 0.07 128);
+    --label-lime-swatch: oklch(70% 0.15 128);
+    --label-green-bg: oklch(33% 0.065 148);
+    --label-green-ink: oklch(89% 0.07 148);
+    --label-green-swatch: oklch(70% 0.15 148);
+    --label-emerald-bg: oklch(33% 0.065 163);
+    --label-emerald-ink: oklch(89% 0.07 163);
+    --label-emerald-swatch: oklch(70% 0.15 163);
+    --label-teal-bg: oklch(33% 0.065 188);
+    --label-teal-ink: oklch(89% 0.07 188);
+    --label-teal-swatch: oklch(70% 0.15 188);
+    --label-cyan-bg: oklch(33% 0.065 208);
+    --label-cyan-ink: oklch(89% 0.07 208);
+    --label-cyan-swatch: oklch(70% 0.15 208);
+    --label-sky-bg: oklch(33% 0.065 232);
+    --label-sky-ink: oklch(89% 0.07 232);
+    --label-sky-swatch: oklch(70% 0.15 232);
+    --label-blue-bg: oklch(33% 0.065 258);
+    --label-blue-ink: oklch(89% 0.07 258);
+    --label-blue-swatch: oklch(70% 0.15 258);
+    --label-indigo-bg: oklch(33% 0.065 277);
+    --label-indigo-ink: oklch(89% 0.07 277);
+    --label-indigo-swatch: oklch(70% 0.15 277);
+    --label-violet-bg: oklch(33% 0.065 295);
+    --label-violet-ink: oklch(89% 0.07 295);
+    --label-violet-swatch: oklch(70% 0.15 295);
+    --label-purple-bg: oklch(33% 0.065 310);
+    --label-purple-ink: oklch(89% 0.07 310);
+    --label-purple-swatch: oklch(70% 0.15 310);
+    --label-fuchsia-bg: oklch(33% 0.065 328);
+    --label-fuchsia-ink: oklch(89% 0.07 328);
+    --label-fuchsia-swatch: oklch(70% 0.15 328);
+    --label-pink-bg: oklch(33% 0.065 350);
+    --label-pink-ink: oklch(89% 0.07 350);
+    --label-pink-swatch: oklch(70% 0.15 350);
+    --label-slate-bg: oklch(33% 0.012 255);
+    --label-slate-ink: oklch(89% 0.013 255);
+    --label-slate-swatch: oklch(70% 0.027 255);
+  }
+}
+
+:root[data-theme='dark'] {
+  --label-rose-bg: oklch(33% 0.065 12);
+  --label-rose-ink: oklch(89% 0.07 12);
+  --label-rose-swatch: oklch(70% 0.15 12);
+  --label-red-bg: oklch(33% 0.065 27);
+  --label-red-ink: oklch(89% 0.07 27);
+  --label-red-swatch: oklch(70% 0.15 27);
+  --label-orange-bg: oklch(33% 0.065 50);
+  --label-orange-ink: oklch(89% 0.07 50);
+  --label-orange-swatch: oklch(70% 0.15 50);
+  --label-brown-bg: oklch(33% 0.029 55);
+  --label-brown-ink: oklch(89% 0.032 55);
+  --label-brown-swatch: oklch(70% 0.068 55);
+  --label-amber-bg: oklch(33% 0.065 75);
+  --label-amber-ink: oklch(89% 0.07 75);
+  --label-amber-swatch: oklch(70% 0.15 75);
+  --label-yellow-bg: oklch(33% 0.065 98);
+  --label-yellow-ink: oklch(89% 0.07 98);
+  --label-yellow-swatch: oklch(70% 0.15 98);
+  --label-lime-bg: oklch(33% 0.065 128);
+  --label-lime-ink: oklch(89% 0.07 128);
+  --label-lime-swatch: oklch(70% 0.15 128);
+  --label-green-bg: oklch(33% 0.065 148);
+  --label-green-ink: oklch(89% 0.07 148);
+  --label-green-swatch: oklch(70% 0.15 148);
+  --label-emerald-bg: oklch(33% 0.065 163);
+  --label-emerald-ink: oklch(89% 0.07 163);
+  --label-emerald-swatch: oklch(70% 0.15 163);
+  --label-teal-bg: oklch(33% 0.065 188);
+  --label-teal-ink: oklch(89% 0.07 188);
+  --label-teal-swatch: oklch(70% 0.15 188);
+  --label-cyan-bg: oklch(33% 0.065 208);
+  --label-cyan-ink: oklch(89% 0.07 208);
+  --label-cyan-swatch: oklch(70% 0.15 208);
+  --label-sky-bg: oklch(33% 0.065 232);
+  --label-sky-ink: oklch(89% 0.07 232);
+  --label-sky-swatch: oklch(70% 0.15 232);
+  --label-blue-bg: oklch(33% 0.065 258);
+  --label-blue-ink: oklch(89% 0.07 258);
+  --label-blue-swatch: oklch(70% 0.15 258);
+  --label-indigo-bg: oklch(33% 0.065 277);
+  --label-indigo-ink: oklch(89% 0.07 277);
+  --label-indigo-swatch: oklch(70% 0.15 277);
+  --label-violet-bg: oklch(33% 0.065 295);
+  --label-violet-ink: oklch(89% 0.07 295);
+  --label-violet-swatch: oklch(70% 0.15 295);
+  --label-purple-bg: oklch(33% 0.065 310);
+  --label-purple-ink: oklch(89% 0.07 310);
+  --label-purple-swatch: oklch(70% 0.15 310);
+  --label-fuchsia-bg: oklch(33% 0.065 328);
+  --label-fuchsia-ink: oklch(89% 0.07 328);
+  --label-fuchsia-swatch: oklch(70% 0.15 328);
+  --label-pink-bg: oklch(33% 0.065 350);
+  --label-pink-ink: oklch(89% 0.07 350);
+  --label-pink-swatch: oklch(70% 0.15 350);
+  --label-slate-bg: oklch(33% 0.012 255);
+  --label-slate-ink: oklch(89% 0.013 255);
+  --label-slate-swatch: oklch(70% 0.027 255);
+}
+
+.label-color--rose {
+  --label-bg: var(--label-rose-bg);
+  --label-ink: var(--label-rose-ink);
+  --label-swatch: var(--label-rose-swatch);
+}
+
+.label-color--red {
+  --label-bg: var(--label-red-bg);
+  --label-ink: var(--label-red-ink);
+  --label-swatch: var(--label-red-swatch);
+}
+
+.label-color--orange {
+  --label-bg: var(--label-orange-bg);
+  --label-ink: var(--label-orange-ink);
+  --label-swatch: var(--label-orange-swatch);
+}
+
+.label-color--brown {
+  --label-bg: var(--label-brown-bg);
+  --label-ink: var(--label-brown-ink);
+  --label-swatch: var(--label-brown-swatch);
+}
+
+.label-color--amber {
+  --label-bg: var(--label-amber-bg);
+  --label-ink: var(--label-amber-ink);
+  --label-swatch: var(--label-amber-swatch);
+}
+
+.label-color--yellow {
+  --label-bg: var(--label-yellow-bg);
+  --label-ink: var(--label-yellow-ink);
+  --label-swatch: var(--label-yellow-swatch);
+}
+
+.label-color--lime {
+  --label-bg: var(--label-lime-bg);
+  --label-ink: var(--label-lime-ink);
+  --label-swatch: var(--label-lime-swatch);
+}
+
+.label-color--green {
+  --label-bg: var(--label-green-bg);
+  --label-ink: var(--label-green-ink);
+  --label-swatch: var(--label-green-swatch);
+}
+
+.label-color--emerald {
+  --label-bg: var(--label-emerald-bg);
+  --label-ink: var(--label-emerald-ink);
+  --label-swatch: var(--label-emerald-swatch);
+}
+
+.label-color--teal {
+  --label-bg: var(--label-teal-bg);
+  --label-ink: var(--label-teal-ink);
+  --label-swatch: var(--label-teal-swatch);
+}
+
+.label-color--cyan {
+  --label-bg: var(--label-cyan-bg);
+  --label-ink: var(--label-cyan-ink);
+  --label-swatch: var(--label-cyan-swatch);
+}
+
+.label-color--sky {
+  --label-bg: var(--label-sky-bg);
+  --label-ink: var(--label-sky-ink);
+  --label-swatch: var(--label-sky-swatch);
+}
+
+.label-color--blue {
+  --label-bg: var(--label-blue-bg);
+  --label-ink: var(--label-blue-ink);
+  --label-swatch: var(--label-blue-swatch);
+}
+
+.label-color--indigo {
+  --label-bg: var(--label-indigo-bg);
+  --label-ink: var(--label-indigo-ink);
+  --label-swatch: var(--label-indigo-swatch);
+}
+
+.label-color--violet {
+  --label-bg: var(--label-violet-bg);
+  --label-ink: var(--label-violet-ink);
+  --label-swatch: var(--label-violet-swatch);
+}
+
+.label-color--purple {
+  --label-bg: var(--label-purple-bg);
+  --label-ink: var(--label-purple-ink);
+  --label-swatch: var(--label-purple-swatch);
+}
+
+.label-color--fuchsia {
+  --label-bg: var(--label-fuchsia-bg);
+  --label-ink: var(--label-fuchsia-ink);
+  --label-swatch: var(--label-fuchsia-swatch);
+}
+
+.label-color--pink {
+  --label-bg: var(--label-pink-bg);
+  --label-ink: var(--label-pink-ink);
+  --label-swatch: var(--label-pink-swatch);
+}
+
+.label-color--slate {
+  --label-bg: var(--label-slate-bg);
+  --label-ink: var(--label-slate-ink);
+  --label-swatch: var(--label-slate-swatch);
+}

@@ -28,6 +28,10 @@ def verify_password(password: str, password_hash: str) -> bool:
         return False
 
 
+def session_for(user: User) -> dict:
+    return {"user_id": str(user.id), "session_version": user.session_version}
+
+
 async def retrieve_user_handler(session: dict, connection: ASGIConnection) -> User | None:
     # The session cookie round-trips through JSON, which has no UUID type - the id comes back as a
     # string, and a malformed one must read as "not logged in", not a 500.
@@ -36,7 +40,12 @@ async def retrieve_user_handler(session: dict, connection: ASGIConnection) -> Us
     except (ValueError, TypeError, AttributeError):
         return None
     async with session_factory() as db_session:
-        return await db_session.get(User, user_id)
+        user = await db_session.get(User, user_id)
+    # A cookie from before the last password change no longer counts. One from before sessions
+    # carried a version at all reads as version 0, so existing logins survive the upgrade.
+    if user is None or session.get("session_version", 0) != user.session_version:
+        return None
+    return user
 
 
 # CookieBackendConfig encrypts the session with AES, which needs a 16/24/32-byte key - hashing
@@ -51,5 +60,7 @@ session_backend_config = CookieBackendConfig(
 session_auth = SessionAuth[User, CookieBackendConfig](
     retrieve_user_handler=retrieve_user_handler,
     session_backend_config=session_backend_config,
-    exclude=["/api/auth/register", "/api/auth/login", "/health", "/schema", r"^/(?!api).*"],
+    # Anchored: Litestar searches each pattern anywhere in the path, so an unanchored "/health"
+    # would also let through any path that merely contains it.
+    exclude=[r"^/api/auth/(register|login)$", r"^/health$", r"^/schema(/|$)", r"^/(?!api(/|$))"],
 )

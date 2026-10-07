@@ -4,16 +4,19 @@ import { describe, expect, it } from 'vitest'
 import {
   addCard,
   addColumn,
+  addLabel,
   cardTarget,
   columnTarget,
   findCard,
   moveCardLocally,
   removeCard,
   removeColumn,
+  removeLabel,
   replaceCard,
+  replaceLabel,
   resolveDrop,
 } from '../../src/lib/board'
-import { card, layout, makeBoard } from '../testUtils/fixtures'
+import { LABELS, card, layout, makeBoard, makeLabelledBoard } from '../testUtils/fixtures'
 
 describe('targets', () => {
   it('namespaces card and column ids', () => {
@@ -143,5 +146,26 @@ describe('board updates', () => {
       ['done', 1],
     ])
     expect(removed.name).toBe('My board')
+  })
+})
+
+describe('label updates', () => {
+  it('addLabel appends to the board list', () => {
+    const label = { id: 'l-new', name: 'New', color: 'sky' as const }
+    expect(addLabel(makeLabelledBoard(), label).labels).toEqual([...LABELS, label])
+  })
+
+  it('replaceLabel swaps the label with the same id only', () => {
+    const renamed = { id: 'l-home', name: 'House', color: 'brown' as const }
+    expect(replaceLabel(makeLabelledBoard(), renamed).labels).toEqual([LABELS[0], renamed, LABELS[2]])
+  })
+
+  it('removeLabel takes it off the board and off every card, leaving the rest', () => {
+    const board = removeLabel(makeLabelledBoard(), 'l-errand')
+    expect(board.labels).toEqual([LABELS[0], LABELS[1]])
+    expect(findCard(board, 'a')!.labels).toEqual(['l-urgent'])
+    expect(findCard(board, 'b')!.labels).toEqual(['l-home'])
+    expect(findCard(board, 'd')!.labels).toEqual([])
+    expect(layout(board)).toEqual(layout(makeLabelledBoard()))
   })
 })

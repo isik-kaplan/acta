@@ -15,7 +15,9 @@ from app.controllers.auth import auth_router
 from app.controllers.boards import boards_router
 from app.controllers.cards import cards_router
 from app.controllers.columns import columns_router
+from app.controllers.labels import labels_router
 from app.controllers.push import push_router
+from app.csrf import refuse_cross_site_writes
 from app.db import create_tables, get_db_session
 from app.services.reminders import run_reminders
 
@@ -29,7 +31,16 @@ async def health() -> dict[str, str]:
 
 
 def _build_route_handlers() -> list:
-    handlers = [health, auth_router, account_router, boards_router, columns_router, cards_router, push_router]
+    handlers = [
+        health,
+        auth_router,
+        account_router,
+        boards_router,
+        columns_router,
+        cards_router,
+        labels_router,
+        push_router,
+    ]
     if STATIC_DIR.is_dir():
         # The built SPA, only present once the frontend build has been copied in. In the Docker
         # image nginx serves it instead (docker/nginx.conf); this is for running the backend alone.
@@ -62,6 +73,7 @@ app = Litestar(
     route_handlers=_build_route_handlers(),
     dependencies={"db_session": Provide(get_db_session)},
     on_app_init=[session_auth.on_app_init],
+    before_request=refuse_cross_site_writes,
     on_startup=[create_tables],
     lifespan=[reminder_lifespan],
     cors_config=_build_cors_config(),

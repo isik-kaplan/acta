@@ -1,4 +1,4 @@
-import type { Board, Card, Column } from '../api/types'
+import type { Board, Card, Column, Label } from '../api/types'
 
 export interface Placement {
   columnId: string
@@ -93,4 +93,24 @@ export function addColumn(board: Board, column: Column): Board {
 
 export function removeColumn(board: Board, columnId: string): Board {
   return { ...board, columns: withPositions(board.columns.filter((column) => column.id !== columnId)) }
+}
+
+export function addLabel(board: Board, label: Label): Board {
+  return { ...board, labels: [...board.labels, label] }
+}
+
+export function replaceLabel(board: Board, label: Label): Board {
+  return { ...board, labels: board.labels.map((each) => (each.id === label.id ? label : each)) }
+}
+
+/** The label gone from the board, and so from every card that had it. */
+export function removeLabel(board: Board, labelId: string): Board {
+  return {
+    ...board,
+    labels: board.labels.filter((label) => label.id !== labelId),
+    columns: board.columns.map((column) => ({
+      ...column,
+      cards: column.cards.map((card) => ({ ...card, labels: card.labels.filter((each) => each !== labelId) })),
+    })),
+  }
 }

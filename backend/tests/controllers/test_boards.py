@@ -28,11 +28,12 @@ async def test_create_board_adds_the_default_columns_and_lists_in_creation_order
 
 async def test_create_board_rejects_a_blank_name(authed_client) -> None:
     assert (await authed_client.post("/api/boards", json={"name": "   "})).status_code == 400
-    assert (await authed_client.post("/api/boards", json={"name": "x" * 121})).status_code == 400
 
 
-async def test_board_names_may_be_120_characters(authed_client) -> None:
-    assert (await authed_client.post("/api/boards", json={"name": "x" * 120})).status_code == 201
+async def test_board_names_have_no_length_limit(authed_client) -> None:
+    response = await authed_client.post("/api/boards", json={"name": "x" * 100_000})
+    assert response.status_code == 201
+    assert len(response.json()["name"]) == 100_000
 
 
 async def test_list_boards_only_shows_your_own(authed_client, other_client) -> None:
@@ -42,8 +43,8 @@ async def test_list_boards_only_shows_your_own(authed_client, other_client) -> N
 
 async def test_board_detail_groups_cards_into_their_columns_in_order(authed_client, board) -> None:
     todo, doing, _ = board["columns"]
-    for title in ("one", "two"):
-        await authed_client.post(f"/api/columns/{todo['id']}/cards", json={"title": title})
+    for title, reminders in (("one", [30, 0]), ("two", [])):
+        await authed_client.post(f"/api/columns/{todo['id']}/cards", json={"title": title, "reminders": reminders})
     await authed_client.post(f"/api/columns/{doing['id']}/cards", json={"title": "three"})
 
     detail = (await authed_client.get(f"/api/boards/{board['id']}")).json()
@@ -53,6 +54,7 @@ async def test_board_detail_groups_cards_into_their_columns_in_order(authed_clie
         [],
     ]
     assert [card["position"] for card in detail["columns"][0]["cards"]] == [0, 1]
+    assert [card["reminders"] for card in detail["columns"][0]["cards"]] == [[0, 30], []]
     assert set(detail["columns"][0]) == {"id", "name", "position", "cards"}
 
 

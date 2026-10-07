@@ -9,7 +9,7 @@ from app.services import push
 from app.services.vapid import VapidKeys
 
 
-SUBSCRIPTION = PushSubscription(endpoint="https://push.example/x", p256dh="p", auth="a")
+SUBSCRIPTION = PushSubscription(endpoint="https://fcm.googleapis.com/fcm/send/x", p256dh="p", auth="a")
 
 
 @pytest.fixture(autouse=True)
@@ -25,7 +25,10 @@ def test_deliver_sends_the_payload_signed_with_the_vapid_key(monkeypatch) -> Non
     assert push.deliver(SUBSCRIPTION, {"title": "Hi"}) is True
     assert calls == [
         {
-            "subscription_info": {"endpoint": "https://push.example/x", "keys": {"p256dh": "p", "auth": "a"}},
+            "subscription_info": {
+                "endpoint": "https://fcm.googleapis.com/fcm/send/x",
+                "keys": {"p256dh": "p", "auth": "a"},
+            },
             "data": json.dumps({"title": "Hi"}),
             "vapid_private_key": "private",
             "vapid_claims": {"sub": "mailto:me@example.com"},
@@ -45,4 +48,4 @@ def test_deliver_reports_only_a_gone_subscription(monkeypatch, caplog, status, k
     assert push.deliver(SUBSCRIPTION, {}) is kept
     error = WebPushException("nope", response=response)
     messages = [record.getMessage() for record in caplog.records]
-    assert messages == ([f"Push to https://push.example/x failed: {error}"] if kept else [])
+    assert messages == ([f"Push to https://fcm.googleapis.com/fcm/send/x failed: {error}"] if kept else [])

@@ -2,7 +2,7 @@ import uuid
 
 import pytest
 
-from app.auth import hash_password, retrieve_user_handler, session_backend_config, verify_password
+from app.auth import hash_password, retrieve_user_handler, session_auth, session_backend_config, verify_password
 from tests.conftest import register
 
 
@@ -41,3 +41,41 @@ def test_session_cookie_lasts_thirty_days() -> None:
 
 def test_session_key_is_derived_to_32_bytes() -> None:
     assert len(session_backend_config.secret) == 32
+
+
+async def test_retrieve_user_handler_refuses_a_session_from_before_a_password_change(client) -> None:
+    user = await register(client)
+    assert await retrieve_user_handler({"user_id": user["id"], "session_version": 0}, None) is not None
+    assert await retrieve_user_handler({"user_id": user["id"], "session_version": 1}, None) is None
+
+
+async def test_retrieve_user_handler_reads_a_session_without_a_version_as_version_zero(client) -> None:
+    user = await register(client)
+    assert (await retrieve_user_handler({"user_id": user["id"]}, None)).email == "ada@acta.local"
+
+
+@pytest.mark.parametrize(
+    ("path", "excluded"),
+    [
+        ("/api/auth/login", True),
+        ("/api/auth/register", True),
+        ("/health", True),
+        ("/schema", True),
+        ("/schema/openapi.json", True),
+        ("/", True),
+        ("/boards/abc", True),
+        ("/api/auth/me", False),
+        ("/api/auth/login/x", False),
+        ("/api/boards", False),
+        ("/api/boards/health", False),
+        ("/api/x/schema", False),
+        ("/api/healthz", False),
+        ("/api", False),
+        ("/schemas", True),
+    ],
+)
+def test_only_the_public_paths_skip_the_session_check(path, excluded) -> None:
+    from litestar.middleware._utils import build_exclude_path_pattern
+
+    pattern = build_exclude_path_pattern(exclude=session_auth.exclude)
+    assert bool(pattern.findall(path)) is excluded

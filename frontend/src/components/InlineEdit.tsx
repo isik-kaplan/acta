@@ -6,12 +6,11 @@ interface InlineEditProps {
   label: string
   onSave: (value: string) => Promise<boolean>
   className: string
-  maxLength?: number
 }
 
 /** Text that turns into an input when clicked. Enter or leaving the field saves, Escape puts the
  * old value back; saving an empty or unchanged value is a no-op rather than an error. */
-export default function InlineEdit({ value, label, onSave, className, maxLength = 120 }: InlineEditProps) {
+export default function InlineEdit({ value, label, onSave, className }: InlineEditProps) {
   const [draft, setDraft] = useState<string | null>(null)
   const discard = useRef(false)
 
@@ -48,7 +47,6 @@ export default function InlineEdit({ value, label, onSave, className, maxLength 
       className={`inline-edit__input ${className}`}
       aria-label={`${label} name`}
       value={draft}
-      maxLength={maxLength}
       autoFocus
       onChange={(event) => setDraft(event.target.value)}
       onKeyDown={handleKeyDown}

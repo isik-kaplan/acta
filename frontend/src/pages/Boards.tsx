@@ -6,6 +6,7 @@ import * as endpoints from '../api/endpoints'
 import type { BoardSummary } from '../api/types'
 import Composer from '../components/Composer'
 import ConfirmDialog from '../components/ConfirmDialog'
+import EditToggle from '../components/EditToggle'
 import InlineEdit from '../components/InlineEdit'
 import { errorMessage } from '../lib/errors'
 
@@ -14,6 +15,7 @@ export default function Boards() {
   const [boards, setBoards] = useState<BoardSummary[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<BoardSummary | null>(null)
+  const [isEditing, setIsEditing] = useState(false)
 
   useEffect(() => {
     endpoints
@@ -58,6 +60,7 @@ export default function Boards() {
     <div className="page">
       <header className="page__header">
         <h1>Boards</h1>
+        <EditToggle isEditing={isEditing} onToggle={() => setIsEditing(!isEditing)} />
       </header>
 
       {error && <div className="banner banner--error">{error}</div>}
@@ -70,23 +73,28 @@ export default function Boards() {
           <ul className="board-list">
             {boards.map((board) => (
               <li key={board.id} className="board-list__item">
-                <InlineEdit
-                  value={board.name}
-                  label="board"
-                  className="board-list__name"
-                  onSave={(name) => rename(board.id, name)}
-                />
-                <Link to={`/boards/${board.id}`} className="btn btn--small">
-                  Open
-                </Link>
-                <button type="button" className="btn btn--ghost btn--small" onClick={() => setDeleting(board)}>
-                  Delete
-                </button>
+                {isEditing ? (
+                  <>
+                    <InlineEdit
+                      value={board.name}
+                      label="board"
+                      className="board-list__name"
+                      onSave={(name) => rename(board.id, name)}
+                    />
+                    <button type="button" className="btn btn--ghost btn--small" onClick={() => setDeleting(board)}>
+                      Delete
+                    </button>
+                  </>
+                ) : (
+                  <Link to={`/boards/${board.id}`} className="board-list__name board-list__link">
+                    {board.name}
+                  </Link>
+                )}
               </li>
             ))}
           </ul>
           <div className="board-list__new">
-            <Composer noun="board" placeholder="Board name" maxLength={120} onSubmit={create} />
+            <Composer noun="board" placeholder="Board name" onSubmit={create} />
           </div>
         </>
       )}

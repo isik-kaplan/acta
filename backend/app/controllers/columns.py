@@ -5,7 +5,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Card
 from app.schemas import BoardDetailOut, CardOut, ColumnRequest, CreateCardRequest, MoveColumnRequest
-from app.services.boards import board_detail, card_out, cards_of, columns_of, owned_board, owned_column
+from app.services.boards import (
+    board_detail,
+    cards_of,
+    columns_of,
+    owned_board,
+    owned_column,
+    set_reminders,
+    single_card_out,
+)
+from app.services.labels import set_card_labels
 from app.services.ordering import place, renumber
 
 
@@ -45,13 +54,18 @@ async def create_card(column_id: UUID, data: CreateCardRequest, request: Request
     card = Card(
         column_id=column.id,
         title=data.title.strip(),
+        summary=data.summary.strip(),
         notes=data.notes,
         due_at=data.due_at,
         position=len(await cards_of(db_session, column.id)),
     )
     db_session.add(card)
+    await db_session.flush()
+    await set_reminders(db_session, card, data.reminders, due_changed=False)
+    await set_card_labels(db_session, card.id, column.board_id, data.labels)
+    out = await single_card_out(db_session, card)
     await db_session.commit()
-    return card_out(card)
+    return out
 
 
 columns_router = Router(

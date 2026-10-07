@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import * as endpoints from '../api/endpoints'
-import type { Board, CardFields } from '../api/types'
+import type { Board, CardFields, Label, LabelColor } from '../api/types'
 import * as boards from '../lib/board'
 import type { Placement } from '../lib/board'
 import { errorMessage } from '../lib/errors'
 
 export interface BoardActions {
-  addCard: (columnId: string, title: string) => Promise<boolean>
+  addCard: (columnId: string, fields: CardFields) => Promise<boolean>
   saveCard: (cardId: string, fields: CardFields) => Promise<boolean>
   deleteCard: (cardId: string) => Promise<boolean>
   moveCard: (cardId: string, placement: Placement) => Promise<boolean>
@@ -16,6 +16,10 @@ export interface BoardActions {
   moveColumn: (columnId: string, index: number) => Promise<boolean>
   deleteColumn: (columnId: string) => Promise<boolean>
   renameBoard: (name: string) => Promise<boolean>
+  // The new label itself, so a card editor can put it straight on its card; null on failure.
+  addLabel: (name: string, color?: LabelColor) => Promise<Label | null>
+  saveLabel: (labelId: string, name: string, color: LabelColor) => Promise<boolean>
+  deleteLabel: (labelId: string) => Promise<boolean>
 }
 
 export interface BoardState {
@@ -67,9 +71,9 @@ export function useBoard(boardId: string): BoardState {
   const update = (change: (current: Board) => Board) => setBoard((current) => current && change(current))
 
   const actions: BoardActions = {
-    addCard: (columnId, title) =>
+    addCard: (columnId, fields) =>
       attempt(async () => {
-        const card = await endpoints.createCard(columnId, { title, notes: '', due_at: null })
+        const card = await endpoints.createCard(columnId, fields)
         update((current) => boards.addCard(current, card))
       }),
     saveCard: (cardId, fields) =>
@@ -115,6 +119,24 @@ export function useBoard(boardId: string): BoardState {
       attempt(async () => {
         const renamed = await endpoints.renameBoard(boardId, name)
         update((current) => ({ ...current, name: renamed.name }))
+      }),
+    addLabel: async (name, color) => {
+      let label: Label | null = null
+      await attempt(async () => {
+        label = await endpoints.createLabel(boardId, name, color)
+        update((current) => boards.addLabel(current, label!))
+      })
+      return label
+    },
+    saveLabel: (labelId, name, color) =>
+      attempt(async () => {
+        const label = await endpoints.updateLabel(labelId, name, color)
+        update((current) => boards.replaceLabel(current, label))
+      }),
+    deleteLabel: (labelId) =>
+      attempt(async () => {
+        await endpoints.deleteLabel(labelId)
+        update((current) => boards.removeLabel(current, labelId))
       }),
   }
 

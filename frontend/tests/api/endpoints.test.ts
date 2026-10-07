@@ -7,7 +7,7 @@ vi.mock('../../src/api/client', () => ({
   api: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), put: vi.fn(), delete: vi.fn() },
 }))
 
-const FIELDS = { title: 'Water plants', notes: '', due_at: null }
+const FIELDS = { title: 'Water plants', summary: '', notes: '', due_at: null, reminders: [], labels: [] }
 const SUBSCRIPTION = { endpoint: 'https://push.example/1', keys: { p256dh: 'p', auth: 'a' } }
 
 beforeEach(() => {
@@ -46,6 +46,20 @@ describe('endpoints', () => {
     ['updateCard', () => endpoints.updateCard('k1', FIELDS), 'put', ['/cards/k1', FIELDS]],
     ['moveCard', () => endpoints.moveCard('k1', 'c2', 3), 'post', ['/cards/k1/move', { column_id: 'c2', index: 3 }]],
     ['deleteCard', () => endpoints.deleteCard('k1'), 'delete', ['/cards/k1']],
+    ['createLabel', () => endpoints.createLabel('b1', 'Urgent'), 'post', ['/boards/b1/labels', { name: 'Urgent' }]],
+    [
+      'createLabel with a colour',
+      () => endpoints.createLabel('b1', 'Urgent', 'red'),
+      'post',
+      ['/boards/b1/labels', { name: 'Urgent', color: 'red' }],
+    ],
+    [
+      'updateLabel',
+      () => endpoints.updateLabel('l1', 'Soon', 'teal'),
+      'put',
+      ['/labels/l1', { name: 'Soon', color: 'teal' }],
+    ],
+    ['deleteLabel', () => endpoints.deleteLabel('l1'), 'delete', ['/labels/l1']],
     ['fetchPushKey', () => endpoints.fetchPushKey(), 'get', ['/push/public-key']],
     [
       'savePushSubscription',

@@ -46,7 +46,6 @@ export default function Register() {
               className="input"
               type="text"
               required
-              maxLength={120}
               autoComplete="name"
               value={formState.display_name}
               onChange={handleFormStateEvent('display_name')}

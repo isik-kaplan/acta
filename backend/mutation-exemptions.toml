@@ -24,3 +24,55 @@ reason = """SQLite treats pragma names and their ON/on values case-insensitively
 ["app.db.x__enforce_foreign_keys__mutmut_5"]
 fingerprint = "76416cf112a6"
 reason = """SQLite treats pragma names and their ON/on values case-insensitively, so the mutated statement switches on exactly the same foreign-key enforcement as the original."""
+
+["app.db.x__add_card_summary_column_if_missing__mutmut_7"]
+fingerprint = "a8872509a306"
+reason = """SQLite matches table names, column names and keywords case-insensitively, so the recased lookup or ALTER TABLE adds the very same summary column to the very same cards table."""
+
+["app.db.x__add_card_summary_column_if_missing__mutmut_14"]
+fingerprint = "a8872509a306"
+reason = """SQLite matches table names, column names and keywords case-insensitively, so the recased lookup or ALTER TABLE adds the very same summary column to the very same cards table."""
+
+["app.db.x__add_card_summary_column_if_missing__mutmut_15"]
+fingerprint = "a8872509a306"
+reason = """SQLite matches table names, column names and keywords case-insensitively, so the recased lookup or ALTER TABLE adds the very same summary column to the very same cards table."""
+
+["app.db.x__move_reminded_at_to_card_reminders__mutmut_7"]
+fingerprint = "2714d5f1deb6"
+reason = """SQLite matches table names, column names and keywords case-insensitively, so the recased lookup, INSERT ... SELECT or DROP COLUMN reads and writes exactly the same rows and columns."""
+
+["app.db.x__move_reminded_at_to_card_reminders__mutmut_14"]
+fingerprint = "2714d5f1deb6"
+reason = """SQLite matches table names, column names and keywords case-insensitively, so the recased lookup, INSERT ... SELECT or DROP COLUMN reads and writes exactly the same rows and columns."""
+
+["app.db.x__move_reminded_at_to_card_reminders__mutmut_15"]
+fingerprint = "2714d5f1deb6"
+reason = """SQLite matches table names, column names and keywords case-insensitively, so the recased lookup, INSERT ... SELECT or DROP COLUMN reads and writes exactly the same rows and columns."""
+
+["app.db.x__move_reminded_at_to_card_reminders__mutmut_17"]
+fingerprint = "2714d5f1deb6"
+reason = """SQLite matches table names, column names and keywords case-insensitively, so the recased lookup, INSERT ... SELECT or DROP COLUMN reads and writes exactly the same rows and columns."""
+
+["app.db.x__move_reminded_at_to_card_reminders__mutmut_18"]
+fingerprint = "2714d5f1deb6"
+reason = """SQLite matches table names, column names and keywords case-insensitively, so the recased lookup, INSERT ... SELECT or DROP COLUMN reads and writes exactly the same rows and columns."""
+
+["app.db.x__move_reminded_at_to_card_reminders__mutmut_22"]
+fingerprint = "2714d5f1deb6"
+reason = """SQLite matches table names, column names and keywords case-insensitively, so the recased lookup, INSERT ... SELECT or DROP COLUMN reads and writes exactly the same rows and columns."""
+
+["app.db.x__move_reminded_at_to_card_reminders__mutmut_23"]
+fingerprint = "2714d5f1deb6"
+reason = """SQLite matches table names, column names and keywords case-insensitively, so the recased lookup, INSERT ... SELECT or DROP COLUMN reads and writes exactly the same rows and columns."""
+
+["app.db.x__add_session_version_column_if_missing__mutmut_7"]
+fingerprint = "319b8fc677bb"
+reason = """SQLite matches table names, column names and keywords case-insensitively, so the recased lookup or ALTER TABLE adds the very same session_version column to the very same users table."""
+
+["app.db.x__add_session_version_column_if_missing__mutmut_14"]
+fingerprint = "319b8fc677bb"
+reason = """SQLite matches table names, column names and keywords case-insensitively, so the recased lookup or ALTER TABLE adds the very same session_version column to the very same users table."""
+
+["app.db.x__add_session_version_column_if_missing__mutmut_15"]
+fingerprint = "319b8fc677bb"
+reason = """SQLite matches table names, column names and keywords case-insensitively, so the recased lookup or ALTER TABLE adds the very same session_version column to the very same users table."""

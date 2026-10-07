@@ -99,4 +99,13 @@ describe('openNotification', () => {
     await openNotification(scope, { data: {}, close: vi.fn() })
     expect(scope.clients.openWindow).toHaveBeenLastCalledWith('https://acta.example/')
   })
+
+  it.each(['https://evil.example/phish', '//evil.example/phish', 'javascript:alert(1)', 'http://acta.example/boards'])(
+    "goes to the start page instead of %s, which is not one of acta's own pages",
+    async (url) => {
+      const scope = makeScope()
+      await openNotification(scope, { data: { url }, close: vi.fn() })
+      expect(scope.clients.openWindow).toHaveBeenCalledWith('https://acta.example/')
+    }
+  )
 })

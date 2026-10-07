@@ -3,19 +3,25 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
+import type { Card, Label } from '../../src/api/types'
 import CardTile from '../../src/components/CardTile'
 import DueBadge from '../../src/components/DueBadge'
-import { card } from '../testUtils/fixtures'
+import { LABELS, card } from '../testUtils/fixtures'
 
 const NOW = new Date('2026-10-06T12:00:00Z')
 
-function renderTile(overrides = {}) {
+function renderTile(overrides: Partial<Card> = {}, labels: Label[] = []) {
   const onOpen = vi.fn()
   render(
     // No sensors: these tests are about the tile, not dragging it (KanbanBoard.test covers that).
     <DndContext sensors={[]}>
       <ol>
-        <CardTile card={card('k1', 'todo', 0, { title: 'Water plants', ...overrides })} now={NOW} onOpen={onOpen} />
+        <CardTile
+          card={card('k1', 'todo', 0, { title: 'Water plants', ...overrides })}
+          labels={labels}
+          now={NOW}
+          onOpen={onOpen}
+        />
       </ol>
     </DndContext>
   )
@@ -30,6 +36,26 @@ describe('CardTile', () => {
     expect(tile).toHaveAttribute('data-card-id', 'k1')
     expect(screen.getByRole('button')).toHaveTextContent(/^Water plants$/)
     expect(document.querySelector('.card-tile__meta')).toBeNull()
+  })
+
+  it('shows its labels above the title, in the board order, on their colours', () => {
+    renderTile({ labels: ['l-errand', 'l-urgent', 'l-gone'] }, LABELS)
+    const chips = [...document.querySelectorAll('.card-tile__labels > *')]
+    expect(chips.map((chip) => chip.textContent)).toEqual(['Urgent', 'Errand'])
+    expect(chips[0]).toHaveClass('label-chip', 'label-color--red')
+    expect(chips[1]).toHaveClass('label-chip', 'label-color--teal')
+    expect(screen.getByRole('button')).toHaveTextContent(/^Water plantsUrgentErrand$/)
+  })
+
+  it('shows no label row for a card without labels the board knows', () => {
+    renderTile({ labels: ['l-gone'] }, LABELS)
+    expect(document.querySelector('.card-tile__labels')).toBeNull()
+  })
+
+  it('shows the short description under the title', () => {
+    renderTile({ summary: 'Both balconies' })
+    expect(screen.getByRole('button')).toHaveTextContent(/^Water plantsBoth balconies$/)
+    expect(screen.getByText('Both balconies')).toHaveClass('card-tile__summary')
   })
 
   it('shows the due date and a notes mark when the card has them', () => {

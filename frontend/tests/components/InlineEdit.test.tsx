@@ -26,7 +26,7 @@ describe('InlineEdit', () => {
     expect(input()).toHaveFocus()
     expect(input()).toHaveValue('To do')
     expect(input()).toHaveAttribute('class', 'inline-edit__input lane__name')
-    expect(input()).toHaveAttribute('maxlength', '120')
+    expect(input()).not.toHaveAttribute('maxlength')
   })
 
   it('saves the trimmed value on Enter', async () => {
@@ -86,11 +86,5 @@ describe('InlineEdit', () => {
     await userEvent.type(input(), '{ArrowLeft}x')
     expect(input()).toHaveValue('To dxo')
     expect(onSave).not.toHaveBeenCalled()
-  })
-
-  it('takes a custom maximum length', async () => {
-    render(<InlineEdit value="x" label="board" className="c" onSave={vi.fn()} maxLength={10} />)
-    await userEvent.click(screen.getByRole('button', { name: 'x' }))
-    expect(screen.getByRole('textbox', { name: 'board name' })).toHaveAttribute('maxlength', '10')
   })
 })

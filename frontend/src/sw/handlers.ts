@@ -58,7 +58,9 @@ export async function openNotification(
 ): Promise<unknown> {
   notification.close()
   // Stryker disable next-line StringLiteral: an empty URL resolves to the origin's root, the same as "/"
-  const url = new URL(notification.data?.url ?? '/', scope.location.origin).href
+  const target = new URL(notification.data?.url ?? '/', scope.location.origin)
+  // Only ever a page of acta's own: a notification pointing anywhere else opens the start page.
+  const url = target.origin === scope.location.origin ? target.href : `${scope.location.origin}/`
   const windows = await scope.clients.matchAll({ type: 'window', includeUncontrolled: true })
   const existing = windows.find((each) => new URL(each.url).origin === scope.location.origin)
   if (!existing) return scope.clients.openWindow(url)

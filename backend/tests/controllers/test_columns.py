@@ -80,19 +80,29 @@ async def test_create_card_appends_it_with_its_fields(authed_client, board) -> N
     column_id = board["columns"][0]["id"]
     first = (await authed_client.post(f"/api/columns/{column_id}/cards", json={"title": "first"})).json()
     assert first["position"] == 0
+    assert first["summary"] == ""
     assert first["notes"] == ""
     assert first["due_at"] is None
+    assert first["reminders"] == []
     assert first["column_id"] == column_id
 
     response = await authed_client.post(
         f"/api/columns/{column_id}/cards",
-        json={"title": "  second  ", "notes": "details", "due_at": "2026-10-07T09:00:00+02:00"},
+        json={
+            "title": "  second  ",
+            "summary": " gist ",
+            "notes": "details",
+            "due_at": "2026-10-07T09:00:00+02:00",
+            "reminders": [1440, 0, 1440],
+        },
     )
     assert response.status_code == 201
     second = response.json()
-    assert set(second) == {"id", "column_id", "title", "notes", "due_at", "position"}
+    assert set(second) == {"id", "column_id", "title", "summary", "notes", "due_at", "position", "reminders", "labels"}
     assert second["title"] == "second"
+    assert second["summary"] == "gist"
     assert second["notes"] == "details"
+    assert second["reminders"] == [0, 1440]
     assert second["due_at"] == "2026-10-07T07:00:00Z"
     assert second["position"] == 1
 
@@ -104,8 +114,10 @@ async def test_create_card_rejects_a_due_date_without_a_zone(authed_client, boar
     assert response.status_code == 400
 
 
-async def test_create_card_rejects_a_blank_or_overlong_title(authed_client, board) -> None:
+async def test_create_card_rejects_a_blank_title_but_not_a_long_one(authed_client, board) -> None:
     url = f"/api/columns/{board['columns'][0]['id']}/cards"
     assert (await authed_client.post(url, json={"title": "  "})).status_code == 400
-    assert (await authed_client.post(url, json={"title": "x" * 201})).status_code == 400
-    assert (await authed_client.post(url, json={"title": "x" * 200})).status_code == 201
+    response = await authed_client.post(url, json={"title": "x" * 100_000, "summary": "s" * 100_000})
+    assert response.status_code == 201
+    assert len(response.json()["title"]) == 100_000
+    assert len(response.json()["summary"]) == 100_000

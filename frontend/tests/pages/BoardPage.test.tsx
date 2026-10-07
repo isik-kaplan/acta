@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Link, MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -8,7 +8,7 @@ import type { BoardState } from '../../src/hooks/useBoard'
 import { readLastBoard } from '../../src/lib/lastBoard'
 import BoardPage from '../../src/pages/BoardPage'
 import { makeActions } from '../testUtils/actions'
-import { card, makeBoard } from '../testUtils/fixtures'
+import { card, makeBoard, makeLabelledBoard } from '../testUtils/fixtures'
 
 vi.mock('../../src/hooks/useBoard')
 
@@ -65,7 +65,8 @@ describe('BoardPage', () => {
     renderPage('/boards/b1')
     expect(useBoard).toHaveBeenCalledWith('b1')
     expect(readLastBoard()).toBe('b1')
-    expect(screen.getByRole('button', { name: 'My board' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'My board' })).toHaveClass('board__name')
+    expect(screen.queryByRole('button', { name: 'My board' })).toBeNull()
     expect(screen.getByText('4 cards')).toBeInTheDocument()
     expect(screen.getAllByRole('region')).toHaveLength(3)
   })
@@ -86,6 +87,20 @@ describe('BoardPage', () => {
     expect(screen.getByText('1 card')).toBeInTheDocument()
   })
 
+  it('toggles edit mode, which brings out every rename, menu and the add-column slot', async () => {
+    mockBoard()
+    renderPage()
+    expect(screen.queryByRole('button', { name: 'Add a column' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'To do options' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    expect(screen.getByRole('button', { name: 'My board' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add a column' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'To do options' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Done editing' }))
+    expect(screen.getByRole('heading', { level: 1, name: 'My board' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Add a column' })).toBeNull()
+  })
+
   it('shows a loader until the board arrives', () => {
     mockBoard({ board: null })
     renderPage()
@@ -102,9 +117,10 @@ describe('BoardPage', () => {
     expect(screen.getByText('board list')).toBeInTheDocument()
   })
 
-  it('renames the board', async () => {
+  it('renames the board in edit mode', async () => {
     const state = mockBoard()
     renderPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
     await userEvent.click(screen.getByRole('button', { name: 'My board' }))
     await userEvent.type(screen.getByRole('textbox', { name: 'board name' }), '!{Enter}')
     expect(state.actions.renameBoard).toHaveBeenCalledWith('My board!')
@@ -128,6 +144,36 @@ describe('BoardPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(screen.getByTestId('where')).toHaveTextContent(/^\/boards\/b1$/)
     expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('Add a card opens an empty form for that column, which closes without touching the url', async () => {
+    const state = mockBoard()
+    renderPage()
+    const doing = screen.getByRole('region', { name: 'Doing' })
+    await userEvent.click(within(doing).getByRole('button', { name: 'Add a card' }))
+    expect(screen.getByRole('dialog', { name: 'New card' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Column')).toHaveValue('doing')
+    expect(screen.getByTestId('where')).toHaveTextContent(/^\/boards\/b1$/)
+    await userEvent.type(screen.getByLabelText('Title'), 'Water plants')
+    await userEvent.click(screen.getByRole('button', { name: 'Add card' }))
+    expect(state.actions.addCard).toHaveBeenCalledWith('doing', {
+      title: 'Water plants',
+      summary: '',
+      notes: '',
+      due_at: null,
+      reminders: [0],
+      labels: [],
+    })
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('cancelling a new card closes the form without adding anything', async () => {
+    const state = mockBoard()
+    renderPage()
+    await userEvent.click(screen.getAllByRole('button', { name: 'Add a card' })[0])
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(state.actions.addCard).not.toHaveBeenCalled()
   })
 
   it('opens the card a notification linked to', () => {
@@ -163,5 +209,114 @@ describe('BoardPage', () => {
     act(() => vi.advanceTimersByTime(30_000))
     expect(document.querySelector('.due')).toHaveClass('due--overdue')
     vi.useRealTimers()
+  })
+})
+
+describe('BoardPage labels', () => {
+  const shown = () => [...document.querySelectorAll('[data-card-id]')].map((tile) => tile.getAttribute('data-card-id'))
+  const filterToggle = (name: string) =>
+    within(screen.getByRole('group', { name: 'Filter by label' })).getByRole('button', { name: new RegExp(`${name}$`) })
+
+  it('has no filter row on a board without labels', () => {
+    mockBoard()
+    renderPage()
+    expect(screen.queryByRole('group', { name: 'Filter by label' })).toBeNull()
+  })
+
+  it('filters the board by label, keeping the filter in the url', async () => {
+    mockBoard({ board: makeLabelledBoard() })
+    renderPage()
+    expect(shown()).toEqual(['a', 'b', 'c', 'd'])
+    await userEvent.click(filterToggle('Errand'))
+    expect(screen.getByTestId('where')).toHaveTextContent('/boards/b1?labels=l-errand')
+    expect(shown()).toEqual(['b', 'd'])
+    await userEvent.click(filterToggle('Urgent'))
+    expect(screen.getByTestId('where')).toHaveTextContent('/boards/b1?labels=l-errand%2Cl-urgent')
+    expect(shown()).toEqual(['a', 'b', 'd'])
+    await userEvent.click(screen.getByRole('button', { name: 'Clear filter' }))
+    expect(screen.getByTestId('where')).toHaveTextContent(/^\/boards\/b1$/)
+    expect(shown()).toEqual(['a', 'b', 'c', 'd'])
+  })
+
+  it('switches the filter to cards with every label, keeping that in the url', async () => {
+    mockBoard({ board: makeLabelledBoard() })
+    renderPage('/boards/b1?labels=l-home,l-errand')
+    expect(shown()).toEqual(['b', 'd'])
+    await userEvent.click(screen.getByRole('button', { name: 'All' }))
+    expect(screen.getByTestId('where')).toHaveTextContent(/^\/boards\/b1\?labels=l-home%2Cl-errand&match=all$/)
+    expect(shown()).toEqual(['b'])
+    await userEvent.click(screen.getByRole('button', { name: 'Any' }))
+    expect(screen.getByTestId('where')).toHaveTextContent(/^\/boards\/b1\?labels=l-home%2Cl-errand$/)
+    expect(shown()).toEqual(['b', 'd'])
+  })
+
+  it('reads all from the url, and treats anything else there as any', () => {
+    mockBoard({ board: makeLabelledBoard() })
+    renderPage('/boards/b1?labels=l-home,l-errand&match=all')
+    expect(shown()).toEqual(['b'])
+    cleanup()
+    mockBoard({ board: makeLabelledBoard() })
+    renderPage('/boards/b1?labels=l-home,l-errand&match=both')
+    expect(shown()).toEqual(['b', 'd'])
+    expect(screen.getByRole('button', { name: 'Any' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('clears an all filter back to every card and a clean url', async () => {
+    mockBoard({ board: makeLabelledBoard() })
+    renderPage('/boards/b1?labels=l-home,l-errand&match=all')
+    await userEvent.click(screen.getByRole('button', { name: 'Clear filter' }))
+    expect(screen.getByTestId('where')).toHaveTextContent(/^\/boards\/b1$/)
+    expect(shown()).toEqual(['a', 'b', 'c', 'd'])
+  })
+
+  it('reads the filter from the url, ignoring labels the board no longer has', () => {
+    mockBoard({ board: makeLabelledBoard() })
+    renderPage('/boards/b1?labels=l-gone,l-home')
+    expect(shown()).toEqual(['b'])
+    expect(filterToggle('Home')).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('shows every card when only gone labels are in the url', () => {
+    mockBoard({ board: makeLabelledBoard() })
+    renderPage('/boards/b1?labels=l-gone')
+    expect(shown()).toEqual(['a', 'b', 'c', 'd'])
+  })
+
+  it('keeps the filter while a card is opened and closed', async () => {
+    mockBoard({ board: makeLabelledBoard() })
+    renderPage('/boards/b1?labels=l-errand')
+    await userEvent.click(screen.getByRole('button', { name: /^B/ }))
+    expect(screen.getByTestId('where')).toHaveTextContent('/boards/b1?labels=l-errand&card=b')
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.getByTestId('where')).toHaveTextContent(/^\/boards\/b1\?labels=l-errand$/)
+  })
+
+  it('gives the card editors the board labels', async () => {
+    mockBoard({ board: makeLabelledBoard() })
+    renderPage('/boards/b1?card=a')
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: /Urgent$/ })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    await userEvent.click(
+      within(screen.getByRole('region', { name: 'Done' })).getByRole('button', { name: /Add a card/ })
+    )
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: /Errand$/ })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    )
+  })
+
+  it('opens and closes the label manager', async () => {
+    const state = mockBoard({ board: makeLabelledBoard() })
+    renderPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Labels' }))
+    const manager = screen.getByRole('dialog', { name: 'Labels' })
+    await userEvent.click(within(manager).getByRole('button', { name: 'Delete Urgent' }))
+    await userEvent.click(within(manager).getByRole('button', { name: 'Delete label' }))
+    expect(state.actions.deleteLabel).toHaveBeenCalledWith('l-urgent')
+    await userEvent.click(within(manager).getByRole('button', { name: 'Done' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 })

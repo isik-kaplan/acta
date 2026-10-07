@@ -5,7 +5,7 @@ import { ApiError } from '../../src/api/client'
 import * as endpoints from '../../src/api/endpoints'
 import { useBoard } from '../../src/hooks/useBoard'
 import { findCard } from '../../src/lib/board'
-import { card, layout, makeBoard } from '../testUtils/fixtures'
+import { LABELS, card, layout, makeBoard, makeLabelledBoard } from '../testUtils/fixtures'
 
 vi.mock('../../src/api/endpoints')
 
@@ -81,21 +81,36 @@ describe('useBoard loading', () => {
 })
 
 describe('useBoard actions', () => {
-  it('addCard creates an empty card at the bottom of its column', async () => {
+  it('addCard creates the card with every field, at the bottom of its column', async () => {
     const { result } = await loaded()
-    vi.mocked(endpoints.createCard).mockResolvedValue(card('e', 'done', 0))
+    const fields = {
+      title: 'New one',
+      summary: 's',
+      notes: 'details',
+      due_at: '2026-10-07T09:00:00Z',
+      reminders: [0],
+      labels: [],
+    }
+    vi.mocked(endpoints.createCard).mockResolvedValue(card('e', 'done', 0, fields))
     let ok = false
     await act(async () => {
-      ok = await result.current.actions.addCard('done', 'New one')
+      ok = await result.current.actions.addCard('done', fields)
     })
     expect(ok).toBe(true)
-    expect(endpoints.createCard).toHaveBeenCalledWith('done', { title: 'New one', notes: '', due_at: null })
+    expect(endpoints.createCard).toHaveBeenCalledWith('done', fields)
     expect(layout(result.current.board!).done).toEqual(['e'])
   })
 
   it('saveCard replaces the card with what the server returned', async () => {
     const { result } = await loaded()
-    const fields = { title: 'Renamed', notes: 'n', due_at: '2026-10-07T09:00:00Z' }
+    const fields = {
+      title: 'Renamed',
+      summary: '',
+      notes: 'n',
+      due_at: '2026-10-07T09:00:00Z',
+      reminders: [],
+      labels: [],
+    }
     vi.mocked(endpoints.updateCard).mockResolvedValue(card('b', 'todo', 1, fields))
     await act(async () => {
       await result.current.actions.saveCard('b', fields)
@@ -232,7 +247,14 @@ describe('useBoard actions', () => {
     vi.mocked(endpoints.fetchBoard).mockReturnValue(new Promise(() => {}))
     let pending: Promise<boolean>
     act(() => {
-      pending = result.current.actions.addCard('done', 'x')
+      pending = result.current.actions.addCard('done', {
+        title: 'x',
+        summary: '',
+        notes: '',
+        due_at: null,
+        reminders: [],
+        labels: [],
+      })
     })
     rerender({ boardId: 'b2' })
     await act(async () => {
@@ -240,5 +262,71 @@ describe('useBoard actions', () => {
       await pending
     })
     expect(result.current.board).toBeNull()
+  })
+})
+
+describe('useBoard label actions', () => {
+  beforeEach(() => {
+    vi.mocked(endpoints.fetchBoard).mockResolvedValue(makeLabelledBoard())
+  })
+
+  it('addLabel creates it, adds it to the board, and hands it back', async () => {
+    const { result } = await loaded()
+    const label = { id: 'l-new', name: 'New', color: 'sky' as const }
+    vi.mocked(endpoints.createLabel).mockResolvedValue(label)
+    let created: unknown = null
+    await act(async () => {
+      created = await result.current.actions.addLabel('New')
+    })
+    expect(endpoints.createLabel).toHaveBeenCalledWith('b1', 'New', undefined)
+    expect(created).toEqual(label)
+    expect(result.current.board!.labels).toEqual([...LABELS, label])
+  })
+
+  it('addLabel passes a picked colour on', async () => {
+    const { result } = await loaded()
+    vi.mocked(endpoints.createLabel).mockResolvedValue({ id: 'l-new', name: 'New', color: 'red' })
+    await act(async () => {
+      await result.current.actions.addLabel('New', 'red')
+    })
+    expect(endpoints.createLabel).toHaveBeenCalledWith('b1', 'New', 'red')
+  })
+
+  it('addLabel hands back null, and shows why, when it failed', async () => {
+    const { result } = await loaded()
+    vi.mocked(endpoints.createLabel).mockRejectedValue(new ApiError('Taken.', 409))
+    let created: unknown = 'not yet'
+    await act(async () => {
+      created = await result.current.actions.addLabel('Home')
+    })
+    expect(created).toBeNull()
+    expect(result.current.actionError).toBe('Taken.')
+    expect(result.current.board!.labels).toEqual(LABELS)
+  })
+
+  it('saveLabel replaces the label with what the server returned', async () => {
+    const { result } = await loaded()
+    const saved = { id: 'l-home', name: 'House', color: 'brown' as const }
+    vi.mocked(endpoints.updateLabel).mockResolvedValue(saved)
+    let ok = false
+    await act(async () => {
+      ok = await result.current.actions.saveLabel('l-home', 'House', 'brown')
+    })
+    expect(ok).toBe(true)
+    expect(endpoints.updateLabel).toHaveBeenCalledWith('l-home', 'House', 'brown')
+    expect(result.current.board!.labels[1]).toEqual(saved)
+  })
+
+  it('deleteLabel takes it off the board and its cards', async () => {
+    const { result } = await loaded()
+    vi.mocked(endpoints.deleteLabel).mockResolvedValue(undefined)
+    let ok = false
+    await act(async () => {
+      ok = await result.current.actions.deleteLabel('l-errand')
+    })
+    expect(ok).toBe(true)
+    expect(endpoints.deleteLabel).toHaveBeenCalledWith('l-errand')
+    expect(result.current.board!.labels.map((label) => label.id)).toEqual(['l-urgent', 'l-home'])
+    expect(findCard(result.current.board!, 'd')!.labels).toEqual([])
   })
 })

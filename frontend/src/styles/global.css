@@ -3,6 +3,7 @@
  * pre-emit critique: P4 H4 E4 S4 R5 V4
  */
 @import './tokens.css';
+@import './labels.css';
 
 *,
 *::before,
@@ -486,6 +487,59 @@ svg {
   color: var(--color-muted);
 }
 
+/* Reminders: a stack of "[10] [minutes] before  ×" rows under the due date. */
+.reminders {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2xs);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.reminders__legend {
+  padding: 0;
+  margin-bottom: var(--space-3xs);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.reminders__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reminders__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+}
+
+.reminders__amount {
+  flex: 0 0 5.5rem;
+}
+
+.reminders__unit {
+  flex: 0 1 8.5rem;
+}
+
+.reminders__before {
+  font-size: var(--text-sm);
+  color: var(--color-neutral);
+}
+
+.reminders__remove {
+  margin-left: auto;
+  font-size: var(--text-base);
+}
+
 .field__inline {
   display: flex;
   align-items: center;
@@ -561,6 +615,15 @@ textarea.input {
   color: var(--color-paper);
 }
 
+.segmented--small {
+  height: var(--control-h-sm);
+}
+
+.segmented--small button {
+  padding: 0 var(--space-xs);
+  font-size: var(--text-xs);
+}
+
 /* ---------- auth ---------- */
 
 .auth-page {
@@ -615,7 +678,7 @@ textarea.input {
 
 .page {
   width: 100%;
-  max-width: 44rem;
+  max-width: var(--shell-w);
   margin: 0 auto;
   padding: var(--space-xl);
   background: var(--color-paper);
@@ -679,6 +742,15 @@ textarea.input {
   font-size: var(--text-md);
 }
 
+.board-list__link {
+  text-decoration: none;
+  padding: var(--space-3xs) 0;
+}
+
+.board-list__link:hover {
+  color: var(--color-accent);
+}
+
 .board-list__new {
   margin-top: var(--space-md);
   max-width: 24rem;
@@ -719,7 +791,8 @@ textarea.input {
   min-width: 0;
   padding: 0 var(--space-3xs);
   margin-left: calc(-1 * var(--space-3xs));
-  border: var(--rule-w) solid transparent;
+  /* only ever on screen in edit mode, so it always looks editable rather than waiting for a hover */
+  border: var(--rule-w) dashed var(--color-rule);
   background: transparent;
   text-align: left;
   cursor: text;
@@ -727,7 +800,7 @@ textarea.input {
 }
 
 .inline-edit:hover {
-  border-color: var(--color-rule);
+  border-color: var(--color-accent);
 }
 
 .inline-edit__input {
@@ -759,6 +832,21 @@ textarea.input {
     padding: 0 var(--space-sm);
   }
 
+  /* one swipeable row on a phone, rather than a wall of chips pushing the lanes down */
+  .label-filter {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 0 var(--space-sm) var(--space-3xs);
+    scrollbar-width: none;
+  }
+
+  .label-filter .label-toggle,
+  .label-filter .segmented,
+  .label-filter .btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
   .board > .banner {
     margin-left: var(--space-sm);
     margin-right: var(--space-sm);
@@ -788,6 +876,237 @@ textarea.input {
   font-size: var(--text-display);
   letter-spacing: -0.035em;
   line-height: 1.05;
+}
+
+.edit-toggle {
+  margin-left: auto;
+  align-self: center;
+  flex-shrink: 0;
+}
+
+.board__tools {
+  display: flex;
+  gap: var(--space-2xs);
+  margin-left: auto;
+  align-self: center;
+  flex-shrink: 0;
+}
+
+.board__tools .edit-toggle {
+  margin-left: 0;
+}
+
+/* ---------- labels ---------- */
+
+/* A label on a card: its name on its colour (labels.css gives each colour a light and dark pair). */
+.label-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 0 var(--space-2xs);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  line-height: 1.6;
+  color: var(--label-ink);
+  background: var(--label-bg);
+  overflow-wrap: anywhere;
+}
+
+.card-tile__labels {
+  order: -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3xs);
+}
+
+/* A label you can switch on and off - in the card editor and the board's filter row. */
+.label-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3xs);
+  min-height: var(--control-h-sm);
+  max-width: 100%;
+  padding: 0 var(--space-xs) 0 var(--space-2xs);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-align: left;
+  overflow-wrap: anywhere;
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: var(--rule-w) solid var(--color-rule);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.label-toggle:hover {
+  border-color: var(--label-swatch);
+}
+
+.label-toggle[aria-pressed='true'] {
+  color: var(--label-ink);
+  background: var(--label-bg);
+  border-color: var(--label-swatch);
+}
+
+.label-toggle__mark {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 0.9rem;
+  height: 0.9rem;
+  font-size: 0.65rem;
+  line-height: 1;
+  color: var(--color-paper);
+  background: var(--label-swatch);
+}
+
+.label-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.label-picker__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
+}
+
+.label-picker__new,
+.label-list__new {
+  display: flex;
+  gap: var(--space-2xs);
+  align-items: center;
+}
+
+.label-picker__new .input {
+  flex: 1 1 12rem;
+  height: var(--control-h-sm);
+}
+
+.label-picker__new .btn,
+.label-list__new .btn {
+  flex-shrink: 0;
+}
+
+.color-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(2rem, 1fr));
+  gap: var(--space-2xs);
+  padding: var(--space-2xs) 0;
+}
+
+.color-swatch {
+  position: relative;
+  display: block;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  background: var(--label-swatch);
+  border: var(--rule-w) solid var(--color-edge);
+  cursor: pointer;
+}
+
+.color-swatch__input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.color-swatch:has(.color-swatch__input:checked) {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+.color-swatch:has(.color-swatch__input:focus-visible),
+button.color-swatch:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.label-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0 0 var(--space-md);
+  padding: 0;
+  list-style: none;
+  border-top: var(--rule-w) solid var(--color-rule);
+}
+
+.label-row {
+  padding: var(--space-2xs) 0;
+  border-bottom: var(--rule-w) solid var(--color-rule);
+}
+
+.label-row__main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.label-row__color {
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.label-row__name {
+  min-width: 0;
+  font-size: var(--text-sm);
+  line-height: 1.8;
+}
+
+input.label-row__name {
+  flex: 1;
+}
+
+.label-row__uses {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
+
+.label-row__confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding-top: var(--space-2xs);
+  font-size: var(--text-sm);
+}
+
+.label-row__confirm span {
+  flex: 1 1 100%;
+}
+
+.field__hint--error {
+  color: var(--color-negative);
+}
+
+.label-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2xs);
+  width: 100%;
+  max-width: var(--shell-w);
+  margin: 0 auto var(--space-sm);
+}
+
+.label-filter__title {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-neutral);
 }
 
 .board__meta {
@@ -851,10 +1170,19 @@ textarea.input {
 
 .lane__name {
   flex: 1;
+  min-width: 0;
+  line-height: var(--control-h-sm);
   font-family: var(--font-display);
   font-weight: 800;
   font-size: var(--text-base);
   letter-spacing: -0.01em;
+}
+
+/* the same box as the rename button it turns into, so switching edit mode doesn't nudge the lane */
+h2.lane__name {
+  padding: 0 var(--space-3xs);
+  margin-left: calc(-1 * var(--space-3xs));
+  border: var(--rule-w) solid transparent;
 }
 
 .lane__count {
@@ -926,6 +1254,18 @@ textarea.input {
   line-height: 1.35;
   overflow-wrap: anywhere;
   white-space: pre-line;
+}
+
+.card-tile__summary {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin-top: calc(-1 * var(--space-3xs));
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  color: var(--color-neutral);
+  overflow-wrap: anywhere;
 }
 
 .card-tile__meta {

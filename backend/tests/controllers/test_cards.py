@@ -2,9 +2,10 @@ import uuid
 from datetime import UTC, datetime
 
 import pytest
+from sqlalchemy import select
 
 from app.db import session_factory
-from app.models import Card
+from app.models import CardReminder
 
 
 async def add_cards(client, column_id: str, *titles: str) -> list[dict]:
@@ -16,77 +17,116 @@ async def layout(client, board_id: str) -> list[list[tuple[str, int]]]:
     return [[(card["title"], card["position"]) for card in column["cards"]] for column in detail["columns"]]
 
 
-async def set_reminded(card_id: str) -> None:
+SENT = datetime(2026, 1, 1, tzinfo=UTC)
+
+
+async def mark_all_sent(card_id: str) -> None:
     async with session_factory() as db_session:
-        card = await db_session.get(Card, uuid.UUID(card_id))
-        card.reminded_at = datetime(2026, 1, 1, tzinfo=UTC)
+        for reminder in await db_session.scalars(
+            select(CardReminder).where(CardReminder.card_id == uuid.UUID(card_id))
+        ):
+            reminder.sent_at = SENT
         await db_session.commit()
 
 
-async def reminded_at(card_id: str) -> datetime | None:
+async def sent(card_id: str) -> dict[int, datetime | None]:
     async with session_factory() as db_session:
-        return (await db_session.get(Card, uuid.UUID(card_id))).reminded_at
+        rows = await db_session.scalars(select(CardReminder).where(CardReminder.card_id == uuid.UUID(card_id)))
+        return {reminder.minutes_before: reminder.sent_at for reminder in rows}
+
+
+def fields(title: str = "x", due_at: str | None = None, reminders: list[int] | None = None, **rest) -> dict:
+    return {
+        "title": title,
+        "summary": "",
+        "notes": "",
+        "due_at": due_at,
+        "reminders": reminders or [],
+        "labels": [],
+        **rest,
+    }
 
 
 async def test_update_card_replaces_every_field(authed_client, board) -> None:
     (card,) = await add_cards(authed_client, board["columns"][0]["id"], "draft")
     response = await authed_client.put(
         f"/api/cards/{card['id']}",
-        json={"title": " final ", "notes": "more", "due_at": "2026-10-08T12:30:00Z"},
+        json=fields(" final ", "2026-10-08T12:30:00Z", [60, 0, 60], summary="  short  ", notes=" more "),
     )
     assert response.status_code == 200
     body = response.json()
     assert body["title"] == "final"
-    assert body["notes"] == "more"
+    assert body["summary"] == "short"
+    assert body["notes"] == " more "
     assert body["due_at"] == "2026-10-08T12:30:00Z"
+    assert body["reminders"] == [0, 60]
 
-    cleared = await authed_client.put(f"/api/cards/{card['id']}", json={"title": "final", "notes": "", "due_at": None})
+    cleared = await authed_client.put(f"/api/cards/{card['id']}", json=fields("final"))
     assert cleared.json()["due_at"] is None
+    assert cleared.json()["summary"] == ""
     assert cleared.json()["notes"] == ""
+    assert cleared.json()["reminders"] == []
+    assert await sent(card["id"]) == {}
 
 
-async def test_changing_the_due_date_rearms_the_reminder(authed_client, board) -> None:
+async def test_update_card_requires_every_field(authed_client, board) -> None:
     (card,) = await add_cards(authed_client, board["columns"][0]["id"], "x")
-    url = f"/api/cards/{card['id']}"
-    await authed_client.put(url, json={"title": "x", "notes": "", "due_at": "2026-10-08T12:00:00Z"})
-    await set_reminded(card["id"])
-
-    # Same moment, another zone: not a change, so the sent reminder stays sent.
-    await authed_client.put(url, json={"title": "renamed", "notes": "", "due_at": "2026-10-08T14:00:00+02:00"})
-    assert await reminded_at(card["id"]) is not None
-
-    await authed_client.put(url, json={"title": "renamed", "notes": "", "due_at": "2026-10-09T12:00:00Z"})
-    assert await reminded_at(card["id"]) is None
+    for missing in ("summary", "notes", "due_at", "reminders", "labels"):
+        body = fields()
+        del body[missing]
+        assert (await authed_client.put(f"/api/cards/{card['id']}", json=body)).status_code == 400
 
 
-async def test_clearing_the_due_date_rearms_the_reminder(authed_client, board) -> None:
+@pytest.mark.parametrize("reminders", [[-1], [2**63]])
+async def test_update_card_rejects_reminders_a_database_integer_cannot_hold(authed_client, board, reminders) -> None:
     (card,) = await add_cards(authed_client, board["columns"][0]["id"], "x")
-    url = f"/api/cards/{card['id']}"
-    await authed_client.put(url, json={"title": "x", "notes": "", "due_at": "2026-10-08T12:00:00Z"})
-    await set_reminded(card["id"])
-    await authed_client.put(url, json={"title": "x", "notes": "", "due_at": None})
-    assert await reminded_at(card["id"]) is None
+    response = await authed_client.put(f"/api/cards/{card['id']}", json=fields(reminders=reminders))
+    assert response.status_code == 400
 
 
-@pytest.mark.parametrize(
-    ("moved", "index", "expected"),
-    [
-        ("a", 2, [("b", 0), ("c", 1), ("a", 2)]),
-        ("c", 0, [("c", 0), ("a", 1), ("b", 2)]),
-        ("a", 1, [("b", 0), ("a", 1), ("c", 2)]),
-        ("b", 1, [("a", 0), ("b", 1), ("c", 2)]),
-        ("a", 50, [("b", 0), ("c", 1), ("a", 2)]),
-    ],
-)
-async def test_move_card_within_its_column(authed_client, board, moved, index, expected) -> None:
-    column_id = board["columns"][0]["id"]
-    cards = {card["title"]: card for card in await add_cards(authed_client, column_id, "a", "b", "c")}
-    response = await authed_client.post(
-        f"/api/cards/{cards[moved]['id']}/move", json={"column_id": column_id, "index": index}
+async def test_update_card_takes_any_number_of_reminders_any_distance_ahead(authed_client, board) -> None:
+    (card,) = await add_cards(authed_client, board["columns"][0]["id"], "x")
+    reminders = [2**63 - 1, *range(500)]
+    response = await authed_client.put(f"/api/cards/{card['id']}", json=fields(reminders=reminders))
+    assert response.json()["reminders"] == sorted(reminders)
+
+
+async def test_update_card_takes_long_text(authed_client, board) -> None:
+    (card,) = await add_cards(authed_client, board["columns"][0]["id"], "x")
+    response = await authed_client.put(
+        f"/api/cards/{card['id']}", json=fields(summary="s" * 100_000, notes="n" * 1_000_000)
     )
-    assert response.status_code == 201
-    assert response.json()["position"] == dict(expected)[moved]
-    assert (await layout(authed_client, board["id"]))[0] == expected
+    assert response.status_code == 200
+    assert len(response.json()["notes"]) == 1_000_000
+
+
+async def test_a_kept_reminder_stays_sent_while_the_due_date_stays(authed_client, board) -> None:
+    (card,) = await add_cards(authed_client, board["columns"][0]["id"], "x")
+    url = f"/api/cards/{card['id']}"
+    await authed_client.put(url, json=fields(due_at="2026-10-08T12:00:00Z", reminders=[0, 30]))
+    await mark_all_sent(card["id"])
+
+    # Same moment, another zone: not a change. The kept one stays sent, the new one is armed.
+    await authed_client.put(url, json=fields("renamed", "2026-10-08T14:00:00+02:00", [30, 60]))
+    assert await sent(card["id"]) == {30: SENT, 60: None}
+
+
+async def test_changing_the_due_date_rearms_every_reminder(authed_client, board) -> None:
+    (card,) = await add_cards(authed_client, board["columns"][0]["id"], "x")
+    url = f"/api/cards/{card['id']}"
+    await authed_client.put(url, json=fields(due_at="2026-10-08T12:00:00Z", reminders=[0, 30]))
+    await mark_all_sent(card["id"])
+    await authed_client.put(url, json=fields(due_at="2026-10-09T12:00:00Z", reminders=[0, 30]))
+    assert await sent(card["id"]) == {0: None, 30: None}
+
+
+async def test_clearing_the_due_date_rearms_the_reminders(authed_client, board) -> None:
+    (card,) = await add_cards(authed_client, board["columns"][0]["id"], "x")
+    url = f"/api/cards/{card['id']}"
+    await authed_client.put(url, json=fields(due_at="2026-10-08T12:00:00Z", reminders=[0]))
+    await mark_all_sent(card["id"])
+    await authed_client.put(url, json=fields(reminders=[0]))
+    assert await sent(card["id"]) == {0: None}
 
 
 async def test_move_card_to_another_column_closes_the_gap_it_leaves(authed_client, board) -> None:
@@ -105,6 +145,14 @@ async def test_move_card_to_another_column_closes_the_gap_it_leaves(authed_clien
         [("x", 0), ("a", 1), ("y", 2)],
         [],
     ]
+
+
+async def test_move_card_answers_with_its_reminders(authed_client, board) -> None:
+    todo, doing, _ = board["columns"]
+    (card,) = await add_cards(authed_client, todo["id"], "a")
+    await authed_client.put(f"/api/cards/{card['id']}", json=fields("a", "2026-10-08T12:00:00Z", [15]))
+    response = await authed_client.post(f"/api/cards/{card['id']}/move", json={"column_id": doing["id"], "index": 0})
+    assert response.json()["reminders"] == [15]
 
 
 async def test_move_card_into_an_empty_column(authed_client, board) -> None:
@@ -134,6 +182,13 @@ async def test_delete_card_renumbers_its_column(authed_client, board) -> None:
     assert (await layout(authed_client, board["id"]))[0] == [("b", 0), ("c", 1)]
 
 
+async def test_delete_card_takes_its_reminders_with_it(authed_client, board) -> None:
+    (card,) = await add_cards(authed_client, board["columns"][0]["id"], "a")
+    await authed_client.put(f"/api/cards/{card['id']}", json=fields("a", "2026-10-08T12:00:00Z", [0, 15]))
+    await authed_client.delete(f"/api/cards/{card['id']}")
+    assert await sent(card["id"]) == {}
+
+
 async def test_delete_card_renumbers_by_position_not_by_age(authed_client, board) -> None:
     column_id = board["columns"][0]["id"]
     a, _, c = await add_cards(authed_client, column_id, "a", "b", "c")
@@ -145,7 +200,7 @@ async def test_delete_card_renumbers_by_position_not_by_age(authed_client, board
 async def test_someone_elses_card_is_not_found(authed_client, board, other_client) -> None:
     (card,) = await add_cards(authed_client, board["columns"][0]["id"], "a")
     for response in (
-        await other_client.put(f"/api/cards/{card['id']}", json={"title": "x", "notes": "", "due_at": None}),
+        await other_client.put(f"/api/cards/{card['id']}", json=fields()),
         await other_client.post(
             f"/api/cards/{card['id']}/move", json={"column_id": board["columns"][1]["id"], "index": 0}
         ),

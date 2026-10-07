@@ -15,6 +15,7 @@ import type { CollisionDetection, DragEndEvent, DragStartEvent } from '@dnd-kit/
 import type { Board } from '../api/types'
 import type { BoardActions } from '../hooks/useBoard'
 import { findCard, resolveDrop } from '../lib/board'
+import type { CardFilter } from '../lib/labels'
 import { CardFace } from './CardTile'
 import Composer from './Composer'
 import Lane from './Lane'
@@ -30,12 +31,28 @@ export const preferCards: CollisionDetection = (args) => {
 
 interface KanbanBoardProps {
   board: Board
+  // Edit mode brings out the column controls - renaming, the per-column menu, adding a column. Out
+  // of it the board is just columns and cards, which is what it's looked at for nearly all the time.
+  isEditing: boolean
+  // The labels to filter the cards by - only cards with any (or all) of them show. Dragging still places
+  // cards among all of a column's cards, hidden ones included, so the order the server keeps is
+  // the order seen once the filter is cleared.
+  filter: CardFilter
   now: Date
   actions: BoardActions
   onOpenCard: (cardId: string) => void
+  onAddCard: (columnId: string) => void
 }
 
-export default function KanbanBoard({ board, now, actions, onOpenCard }: KanbanBoardProps) {
+export default function KanbanBoard({
+  board,
+  isEditing,
+  filter,
+  now,
+  actions,
+  onOpenCard,
+  onAddCard,
+}: KanbanBoardProps) {
   // Mouse: a few pixels of travel tells a drag from a click. Touch: a short hold, so a swipe still
   // scrolls the lanes sideways instead of grabbing whichever card it started on.
   const sensors = useSensors(
@@ -69,22 +86,29 @@ export default function KanbanBoard({ board, now, actions, onOpenCard }: KanbanB
           <Lane
             key={column.id}
             column={column}
+            labels={board.labels}
+            filter={filter}
+            isEditing={isEditing}
             isFirst={index === 0}
             isLast={index === board.columns.length - 1}
             now={now}
             actions={actions}
             onOpenCard={onOpenCard}
+            onAddCard={onAddCard}
           />
         ))}
-        <div className="lane lane--new">
-          <Composer noun="column" placeholder="Column name" maxLength={120} onSubmit={actions.addColumn} />
-        </div>
+        {/* A board with no columns offers the add slot anyway - there'd be nothing else to do on it. */}
+        {(isEditing || board.columns.length === 0) && (
+          <div className="lane lane--new">
+            <Composer noun="column" placeholder="Column name" onSubmit={actions.addColumn} />
+          </div>
+        )}
       </div>
       <DragOverlay dropAnimation={null}>
         {activeCard && (
           <div className="card-tile card-tile--lifted">
             <div className="card-tile__open">
-              <CardFace card={activeCard} now={now} />
+              <CardFace card={activeCard} labels={board.labels} now={now} />
             </div>
           </div>
         )}
