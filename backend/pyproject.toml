@@ -1,6 +1,6 @@
 [project]
 name = "acta"
-version = "0.1.0"
+version = "0.1.1"
 description = "A small personal kanban board with due-date reminders."
 authors = [
   { name = "Işık Kaplan", email = "isik.kaplan@outlook.com" }

@@ -3,6 +3,18 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.1]
+
+### Fixed
+
+- On phones, the label filter is one row you swipe sideways, instead of wrapping onto several lines and pushing the cards down the screen.
+- On phones, a board's name gets a line of its own above the card count and buttons, instead of being squeezed beside them and breaking mid-word in edit mode.
+- On phones, error banners on a board keep their side margins.
+
+### Development
+
+- Mutation testing runs on every push to master instead of weekly, and can still be run by hand (`.github/workflows/mutation.yml`).
+
 ## [0.1.0]
 
 First version.
@@ -29,5 +41,5 @@ First version.
 
 ### Development
 
-- 100% coverage gates on both halves, plus mutation testing: mutmut for the backend and Stryker for the frontend, where every mutant has to be killed by a test or exempted with a reason nothing the app does can differ. Tests run in CI on every push to master and on pull requests; mutation testing on every push to master (`.github/workflows/mutation.yml`).
+- 100% coverage gates on both halves, plus mutation testing: mutmut for the backend and Stryker for the frontend, where every mutant has to be killed by a test or exempted with a reason nothing the app does can differ. Tests run in CI on every push to master and on pull requests; mutation testing by hand and weekly (`.github/workflows/mutation.yml`).
 - Pre-commit hooks for ruff, eslint, prettier and tsc.
