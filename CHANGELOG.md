@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Development
 
 - Mutation testing runs on every push to master instead of weekly, and can still be run by hand (`.github/workflows/mutation.yml`).
+- The backend tests run in a fixed non-UTC timezone, so a mutant that converts to the machine's zone instead of UTC is caught on CI's UTC runners too, not only on a laptop.
 
 ## [0.1.0]
 
