@@ -6,22 +6,36 @@ import {
   addColumn,
   addLabel,
   cardTarget,
-  columnTarget,
   findCard,
+  isPastMiddle,
+  laneTarget,
   moveCardLocally,
+  moveColumnLocally,
+  previewCardOver,
   removeCard,
   removeColumn,
   removeLabel,
   replaceCard,
   replaceLabel,
-  resolveDrop,
+  resolveCardDrop,
+  resolveColumnDrop,
+  targetCard,
+  targetColumn,
 } from '../../src/lib/board'
 import { LABELS, card, layout, makeBoard, makeLabelledBoard } from '../testUtils/fixtures'
 
 describe('targets', () => {
   it('namespaces card and column ids', () => {
     expect(cardTarget('x')).toBe('card:x')
-    expect(columnTarget('x')).toBe('column:x')
+    expect(laneTarget('x')).toBe('lane:x')
+  })
+
+  it('reads back what an id names, colons in the id and all', () => {
+    expect(targetCard(cardTarget('x:y'))).toBe('x:y')
+    expect(targetColumn(laneTarget('x:y'))).toBe('x:y')
+    expect(targetCard(laneTarget('x'))).toBeNull()
+    expect(targetColumn(cardTarget('x'))).toBeNull()
+    expect(targetColumn('card:lane:x')).toBeNull()
   })
 })
 
@@ -70,48 +84,146 @@ describe('moveCardLocally', () => {
   )
 })
 
-describe('resolveDrop', () => {
-  it('takes the place of the card it is dropped on, within a column', () => {
-    expect(resolveDrop(makeBoard(), 'a', 'card:c')).toEqual({ columnId: 'todo', index: 2 })
-    expect(resolveDrop(makeBoard(), 'a', 'card:b')).toEqual({ columnId: 'todo', index: 1 })
-    expect(resolveDrop(makeBoard(), 'c', 'card:a')).toEqual({ columnId: 'todo', index: 0 })
+describe('isPastMiddle', () => {
+  it("is true once the dragged box's middle is below the middle of the one it's over", () => {
+    const over = { top: 100, height: 50 }
+    expect(isPastMiddle({ top: 101, height: 50 }, over)).toBe(true)
+    expect(isPastMiddle({ top: 100, height: 50 }, over)).toBe(false)
+    expect(isPastMiddle({ top: 99, height: 50 }, over)).toBe(false)
+    // Middles, not edges: a short box low in a tall one has passed its middle.
+    expect(isPastMiddle({ top: 140, height: 10 }, { top: 100, height: 60 })).toBe(true)
+    expect(isPastMiddle({ top: 100, height: 100 }, { top: 100, height: 60 })).toBe(true)
   })
 
-  it('goes before the card it is dropped on, in another column', () => {
-    expect(resolveDrop(makeBoard(), 'b', 'card:d')).toEqual({ columnId: 'doing', index: 0 })
+  it('is false with no dragged box measured yet', () => {
+    expect(isPastMiddle(null, { top: 0, height: 50 })).toBe(false)
   })
+})
 
-  it('goes to the bottom of a column dropped on directly', () => {
-    expect(resolveDrop(makeBoard(), 'a', 'column:doing')).toEqual({ columnId: 'doing', index: 1 })
-    expect(resolveDrop(makeBoard(), 'a', 'column:done')).toEqual({ columnId: 'done', index: 0 })
-    expect(resolveDrop(makeBoard(), 'a', 'column:todo')).toEqual({ columnId: 'todo', index: 2 })
-  })
-
-  it('is null when nothing would change', () => {
-    expect(resolveDrop(makeBoard(), 'a', 'card:a')).toBeNull()
-    expect(resolveDrop(makeBoard(), 'c', 'column:todo')).toBeNull()
-    expect(resolveDrop(makeBoard(), 'd', 'column:doing')).toBeNull()
-  })
-
-  it('is null for a target that is no longer on the board', () => {
-    expect(resolveDrop(makeBoard(), 'a', 'column:gone')).toBeNull()
-    expect(resolveDrop(makeBoard(), 'a', 'card:gone')).toBeNull()
-  })
-
-  it('places a card the board does not have yet, without assuming it', () => {
-    expect(resolveDrop(makeBoard(), 'ghost', 'column:todo')).toEqual({ columnId: 'todo', index: 3 })
-  })
-
-  it('reads ids that themselves contain a colon', () => {
+describe('previewCardOver', () => {
+  it("moves the card into another column in front of the card it's over", () => {
     const board = makeBoard()
-    board.columns[2].id = 'x:y'
-    expect(resolveDrop(board, 'a', 'column:x:y')).toEqual({ columnId: 'x:y', index: 0 })
+    const preview = previewCardOver(board, 'a', 'card:d', false)
+    expect(layout(preview)).toEqual({ todo: ['b', 'c'], doing: ['a', 'd'], done: [] })
+    expect(findCard(preview, 'a')?.column_id).toBe('doing')
+    expect(layout(board)).toEqual({ todo: ['a', 'b', 'c'], doing: ['d'], done: [] })
+  })
+
+  it("puts it behind the card it's over once past that card's middle", () => {
+    expect(layout(previewCardOver(makeBoard(), 'd', 'card:a', true)).todo).toEqual(['a', 'd', 'b', 'c'])
+  })
+
+  it("puts it at the bottom over a column's empty space", () => {
+    expect(layout(previewCardOver(makeBoard(), 'd', 'lane:todo', false)).todo).toEqual(['a', 'b', 'c', 'd'])
+    expect(layout(previewCardOver(makeBoard(), 'a', 'lane:done', true)).done).toEqual(['a'])
+  })
+
+  it('leaves the board as it is within the card’s own column', () => {
+    const board = makeBoard()
+    expect(previewCardOver(board, 'a', 'card:c', true)).toBe(board)
+    expect(previewCardOver(board, 'a', 'lane:todo', false)).toBe(board)
+  })
+
+  it('leaves the board as it is for a card or a target it does not have', () => {
+    const board = makeBoard()
+    expect(previewCardOver(board, 'gone', 'card:d', false)).toBe(board)
+    expect(previewCardOver(board, null, 'lane:done', false)).toBe(board)
+    expect(previewCardOver(board, 'a', 'card:gone', false)).toBe(board)
+    expect(previewCardOver(board, 'a', 'lane:gone', false)).toBe(board)
+  })
+})
+
+describe('resolveCardDrop', () => {
+  it('takes the place of the card it is dropped on, within a column', () => {
+    const board = makeBoard()
+    expect(resolveCardDrop(board, board, 'a', 'card:c')).toEqual({ columnId: 'todo', index: 2 })
+    expect(resolveCardDrop(board, board, 'a', 'card:b')).toEqual({ columnId: 'todo', index: 1 })
+    expect(resolveCardDrop(board, board, 'c', 'card:a')).toEqual({ columnId: 'todo', index: 0 })
+  })
+
+  it('lands in the column the preview moved it into', () => {
+    const board = makeBoard()
+    const preview = previewCardOver(board, 'a', 'card:d', true)
+    expect(resolveCardDrop(board, preview, 'a', 'card:d')).toEqual({ columnId: 'doing', index: 0 })
+    expect(resolveCardDrop(board, preview, 'a', 'card:a')).toEqual({ columnId: 'doing', index: 1 })
+  })
+
+  it('stays where the preview has it when let go over anything else', () => {
+    const board = makeBoard()
+    const preview = previewCardOver(board, 'a', 'card:d', false)
+    expect(resolveCardDrop(board, preview, 'a', null)).toEqual({ columnId: 'doing', index: 0 })
+    expect(resolveCardDrop(board, preview, 'a', 'lane:doing')).toEqual({ columnId: 'doing', index: 0 })
+    expect(resolveCardDrop(board, preview, 'a', 'card:b')).toEqual({ columnId: 'doing', index: 0 })
+  })
+
+  it('is null when that is where it started', () => {
+    const board = makeBoard()
+    expect(resolveCardDrop(board, board, 'a', 'card:a')).toBeNull()
+    expect(resolveCardDrop(board, board, 'b', null)).toBeNull()
+    expect(resolveCardDrop(board, board, 'd', 'lane:doing')).toBeNull()
+  })
+
+  it('places a card the board no longer has, without assuming where it was', () => {
+    const preview = makeBoard()
+    const board = { ...preview, columns: preview.columns.map((column) => ({ ...column, cards: [] })) }
+    expect(resolveCardDrop(board, preview, 'a', null)).toEqual({ columnId: 'todo', index: 0 })
+  })
+
+  it('is null for a card the preview does not have', () => {
+    expect(resolveCardDrop(makeBoard(), makeBoard(), 'gone', 'card:a')).toBeNull()
   })
 
   it('agrees with moveCardLocally on where the card ends up', () => {
     const board = makeBoard()
-    const placement = resolveDrop(board, 'a', 'card:c')!
+    const placement = resolveCardDrop(board, board, 'a', 'card:c')!
     expect(layout(moveCardLocally(board, 'a', placement)).todo).toEqual(['b', 'c', 'a'])
+  })
+})
+
+const order = (board: ReturnType<typeof makeBoard>) => board.columns.map((column) => column.id)
+
+describe('moveColumnLocally', () => {
+  it('moves a column to the index and renumbers every column, cards and all', () => {
+    const board = makeBoard()
+    const moved = moveColumnLocally(board, 'todo', 2)
+    expect(order(moved)).toEqual(['doing', 'done', 'todo'])
+    expect(moved.columns.map((column) => column.position)).toEqual([0, 1, 2])
+    expect(layout(moved)).toEqual(layout(board))
+    expect(moved.id).toBe('b1')
+    expect(order(board)).toEqual(['todo', 'doing', 'done'])
+  })
+
+  it('moves a column back toward the start', () => {
+    expect(order(moveColumnLocally(makeBoard(), 'done', 0))).toEqual(['done', 'todo', 'doing'])
+  })
+
+  it('leaves the board alone for a column it does not have', () => {
+    const board = makeBoard()
+    expect(moveColumnLocally(board, 'gone', 0)).toBe(board)
+  })
+})
+
+describe('resolveColumnDrop', () => {
+  it('takes the place of the column it is dropped on, either way', () => {
+    expect(resolveColumnDrop(makeBoard(), 'todo', 'lane:done')).toBe(2)
+    expect(resolveColumnDrop(makeBoard(), 'todo', 'lane:doing')).toBe(1)
+    expect(resolveColumnDrop(makeBoard(), 'done', 'lane:todo')).toBe(0)
+  })
+
+  it('is null dropped on itself, on nothing, or on something that is not a column on the board', () => {
+    expect(resolveColumnDrop(makeBoard(), 'doing', null)).toBeNull()
+    expect(resolveColumnDrop(makeBoard(), 'doing', 'lane:doing')).toBeNull()
+    expect(resolveColumnDrop(makeBoard(), 'doing', 'lane:gone')).toBeNull()
+    expect(resolveColumnDrop(makeBoard(), 'doing', 'card:a')).toBeNull()
+  })
+
+  it('agrees with moveColumnLocally on where the column ends up', () => {
+    const board = makeBoard()
+    expect(order(moveColumnLocally(board, 'todo', resolveColumnDrop(board, 'todo', 'lane:doing')!))).toEqual([
+      'doing',
+      'todo',
+      'done',
+    ])
   })
 })
 

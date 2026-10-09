@@ -106,10 +106,15 @@ export function useBoard(boardId: string): BoardState {
       attempt(async () => {
         setBoard(await endpoints.renameColumn(columnId, name))
       }),
-    moveColumn: (columnId, index) =>
-      attempt(async () => {
+    // Optimistic like moveCard, so a dropped column doesn't spring back for a round trip.
+    moveColumn: async (columnId, index) => {
+      update((current) => boards.moveColumnLocally(current, columnId, index))
+      const moved = await attempt(async () => {
         setBoard(await endpoints.moveColumn(columnId, index))
-      }),
+      })
+      if (!moved) reload()
+      return moved
+    },
     deleteColumn: (columnId) =>
       attempt(async () => {
         await endpoints.deleteColumn(columnId)

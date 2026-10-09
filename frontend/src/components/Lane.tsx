@@ -1,16 +1,30 @@
 import { useState } from 'react'
 
-import { useDroppable } from '@dnd-kit/core'
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 import type { Column, Label } from '../api/types'
 import type { BoardActions } from '../hooks/useBoard'
-import { columnTarget } from '../lib/board'
+import { cardTarget, laneTarget } from '../lib/board'
 import { matchesFilter } from '../lib/labels'
 import type { CardFilter } from '../lib/labels'
 import CardTile from './CardTile'
 import ConfirmDialog from './ConfirmDialog'
 import InlineEdit from './InlineEdit'
 import LaneMenu from './LaneMenu'
+
+function GripIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <rect x="8" y="5" width="3" height="3" />
+      <rect x="13" y="5" width="3" height="3" />
+      <rect x="8" y="10.5" width="3" height="3" />
+      <rect x="13" y="10.5" width="3" height="3" />
+      <rect x="8" y="16" width="3" height="3" />
+      <rect x="13" y="16" width="3" height="3" />
+    </svg>
+  )
+}
 
 interface LaneProps {
   column: Column
@@ -38,7 +52,8 @@ export default function Lane({
   onOpenCard,
   onAddCard,
 }: LaneProps) {
-  const droppable = useDroppable({ id: columnTarget(column.id) })
+  // A drop target for cards, and - by its grip, in edit mode - a column to drag among the others.
+  const sortable = useSortable({ id: laneTarget(column.id) })
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
   const count = column.cards.length
   const shown = column.cards.filter((card) => matchesFilter(card, filter))
@@ -51,12 +66,26 @@ export default function Lane({
 
   return (
     <section
-      ref={droppable.setNodeRef}
-      className={droppable.isOver ? 'lane is-over' : 'lane'}
+      ref={sortable.setNodeRef}
+      className={sortable.isDragging ? 'lane is-dragging' : 'lane'}
+      style={{ transform: CSS.Translate.toString(sortable.transform), transition: sortable.transition }}
       aria-label={column.name}
       data-column-id={column.id}
     >
       <header className="lane__header">
+        {/* Only the grip starts a column drag, so the name stays a click to rename. Pointer only - the
+            options menu's Move left / Move right is the keyboard and screen reader way. */}
+        {isEditing && (
+          <span
+            ref={sortable.setActivatorNodeRef}
+            className="lane__grip"
+            title="Drag to move"
+            aria-hidden="true"
+            {...sortable.listeners}
+          >
+            <GripIcon />
+          </span>
+        )}
         {isEditing ? (
           <InlineEdit
             value={column.name}
@@ -88,11 +117,19 @@ export default function Lane({
         )}
       </header>
 
-      <ol className="lane__cards">
-        {shown.map((card) => (
-          <CardTile key={card.id} card={card} labels={labels} now={now} onOpen={onOpenCard} />
-        ))}
-      </ol>
+      {/* Only the shown cards sort - a hidden one has no tile to shift. Where a drop lands among all
+          of them, hidden ones included, is worked out from the full list (lib/board). */}
+      <SortableContext
+        id={laneTarget(column.id)}
+        items={shown.map((card) => cardTarget(card.id))}
+        strategy={verticalListSortingStrategy}
+      >
+        <ol className="lane__cards">
+          {shown.map((card) => (
+            <CardTile key={card.id} card={card} labels={labels} now={now} onOpen={onOpenCard} />
+          ))}
+        </ol>
+      </SortableContext>
 
       <button type="button" className="composer__open" onClick={() => onAddCard(column.id)}>
         <span aria-hidden="true">+</span> Add a card

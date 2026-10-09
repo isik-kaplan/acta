@@ -189,6 +189,38 @@ describe('useBoard actions', () => {
     expect(result.current.board!.name).toBe('From move')
   })
 
+  it('moveColumn moves the column before the server answers', async () => {
+    const { result } = await loaded()
+    let finish: () => void = () => {}
+    vi.mocked(endpoints.moveColumn).mockReturnValue(new Promise((resolve) => (finish = () => resolve(makeBoard()))))
+    let pending: Promise<boolean>
+    act(() => {
+      pending = result.current.actions.moveColumn('done', 0)
+    })
+    expect(result.current.board!.columns.map((column) => column.id)).toEqual(['done', 'todo', 'doing'])
+    expect(endpoints.moveColumn).toHaveBeenCalledWith('done', 0)
+    await act(async () => {
+      finish()
+      expect(await pending).toBe(true)
+    })
+    expect(endpoints.fetchBoard).toHaveBeenCalledTimes(1)
+  })
+
+  it('moveColumn reloads the board and reports it when the server refuses', async () => {
+    const { result } = await loaded()
+    vi.mocked(endpoints.moveColumn).mockRejectedValue(new ApiError('No column found with this id.', 404))
+    let ok = true
+    await act(async () => {
+      ok = await result.current.actions.moveColumn('done', 0)
+    })
+    expect(ok).toBe(false)
+    expect(result.current.actionError).toBe('No column found with this id.')
+    await waitFor(() => expect(endpoints.fetchBoard).toHaveBeenCalledTimes(2))
+    await waitFor(() =>
+      expect(result.current.board!.columns.map((column) => column.id)).toEqual(['todo', 'doing', 'done'])
+    )
+  })
+
   it('deleteColumn removes the column', async () => {
     const { result } = await loaded()
     vi.mocked(endpoints.deleteColumn).mockResolvedValue(undefined)

@@ -75,6 +75,21 @@ describe('Lane', () => {
     expect(screen.getByLabelText('2 cards')).toBeInTheDocument()
   })
 
+  it('has a grip to drag it by in edit mode only', () => {
+    renderLane(doing(1))
+    const grip = document.querySelector('.lane__grip')!
+    expect(grip).toHaveAttribute('aria-hidden', 'true')
+    expect(grip).toHaveAttribute('title', 'Drag to move')
+    expect(grip.parentElement).toHaveClass('lane__header')
+    expect(grip.parentElement!.firstElementChild).toBe(grip)
+    expect(grip.querySelectorAll('svg > rect')).toHaveLength(6)
+  })
+
+  it('has no grip out of edit mode', () => {
+    renderLane(doing(1), { isEditing: false })
+    expect(document.querySelector('.lane__grip')).toBeNull()
+  })
+
   it('counts a single card in the singular', () => {
     renderLane(doing(1))
     expect(screen.getByLabelText('1 card')).toBeInTheDocument()

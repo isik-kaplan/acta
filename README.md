@@ -5,7 +5,7 @@ them by, and push reminders before a card comes due. Installable as a PWA on pho
 
 - **Backend**: Litestar + SQLAlchemy (async) + SQLite, session-cookie auth, `isik` for env config,
   Web Push via `pywebpush` with a reminder loop running inside the app process.
-- **Frontend**: Vite + React + TypeScript + react-router, `@dnd-kit/core` for drag and drop,
+- **Frontend**: Vite + React + TypeScript + react-router, `@dnd-kit/core` and `@dnd-kit/sortable` for drag and drop,
   `vite-plugin-pwa` (injectManifest) with a service worker that shows the reminders.
 - **Deploy**: one Dockerfile (multi-stage: build frontend, install backend deps, slim runtime with
   nginx in front of uvicorn).
@@ -47,6 +47,20 @@ it. Set `VAPID_PRIVATE_KEY`/`VAPID_PUBLIC_KEY` to pin a pair instead.
 
 Push needs a secure context: `https://`, or `http://localhost`. On iPhone and iPad it works only
 once acta is added to the Home Screen and opened from there.
+
+## Drag and drop
+
+Cards drag in and out of edit mode; columns only in edit mode, by the grip beside their name (the
+column menu's Move left / Move right is the keyboard way). While something is dragged, what's around
+it slides aside and a faded copy of it holds the spot it will land in. A card dragged over another
+column moves into it on screen at once - `KanbanBoard` keeps that as a preview of the board, and Esc
+drops the preview.
+
+A dragged card goes by where the pointer is, never by what the dragged copy overlaps: a card moving
+between columns reshapes both, and an overlap-based guess can flip it back and forth between them
+without end. Below a column's last card, even below the column itself, the pointer still counts as
+in that column; in the gap between columns the card stays where its faded copy is. The drop rules
+themselves are plain functions in `frontend/src/lib/board.ts`.
 
 ## Labels
 

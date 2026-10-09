@@ -1110,11 +1110,35 @@ input.label-row__name {
   background: var(--color-paper-2);
   border: var(--rule-w) solid var(--color-rule);
   scroll-snap-align: start;
-  transition: border-color var(--dur-fast) var(--ease-out);
 }
 
-.lane.is-over {
-  border-color: var(--color-accent);
+.lane.is-dragging {
+  opacity: 0.35;
+}
+
+.lane--lifted {
+  box-shadow: var(--shadow-float);
+  transform: rotate(-1deg);
+  cursor: grabbing;
+}
+
+/* touch-action: a press here is always the start of a drag, never a scroll of the lanes */
+.lane__grip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--space-md);
+  height: var(--control-h-sm);
+  margin-left: calc(-1 * var(--space-2xs));
+  color: var(--color-neutral);
+  cursor: grab;
+  touch-action: none;
+}
+
+.lane__grip svg {
+  width: 1rem;
+  height: 1rem;
 }
 
 .lane--new {
@@ -1154,12 +1178,16 @@ h2.lane__name {
   background: var(--color-paper);
 }
 
+/* padding-bottom: a card shifted aside mid-drag is moved by a whole-pixel rounding of the gap,
+   up to half a pixel past where the last one ends - without room for it, the scroll box clips its
+   bottom border */
 .lane__cards {
   display: flex;
   flex-direction: column;
   gap: var(--space-2xs);
   overflow-y: auto;
   min-height: var(--space-md);
+  padding-bottom: 1px;
 }
 
 /* Phone layout for the board - after its general rules above, which would otherwise win. */
@@ -1238,11 +1266,6 @@ h2.lane__name {
   opacity: 0.35;
   box-shadow: none;
   transform: none;
-}
-
-/* a drop on this card puts the dragged one where this one is - the bar marks that slot */
-.card-tile.is-over {
-  box-shadow: 0 -4px 0 0 var(--color-accent);
 }
 
 .card-tile--lifted {
@@ -1492,7 +1515,8 @@ h2.lane__name {
     transform: none;
   }
 
-  .card-tile--lifted {
+  .card-tile--lifted,
+  .lane--lifted {
     transform: none;
   }
 }

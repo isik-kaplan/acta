@@ -1,4 +1,5 @@
-import { useDraggable, useDroppable } from '@dnd-kit/core'
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 import type { Card, Label } from '../api/types'
 import { cardTarget } from '../lib/board'
@@ -46,22 +47,17 @@ interface CardTileProps {
 }
 
 export default function CardTile({ card, labels, now, onOpen }: CardTileProps) {
-  const draggable = useDraggable({ id: card.id })
-  const droppable = useDroppable({ id: cardTarget(card.id) })
+  const sortable = useSortable({ id: cardTarget(card.id) })
 
-  let className = 'card-tile'
-  if (draggable.isDragging) className += ' is-dragging'
-  else if (droppable.isOver) className += ' is-over'
-
+  // While dragged, the tile stays in the list as a faded stand-in, shifted to wherever the card
+  // would land - the lifted copy is what follows the pointer.
   return (
     <li
-      ref={(node) => {
-        draggable.setNodeRef(node)
-        droppable.setNodeRef(node)
-      }}
-      className={className}
+      ref={sortable.setNodeRef}
+      className={sortable.isDragging ? 'card-tile is-dragging' : 'card-tile'}
+      style={{ transform: CSS.Translate.toString(sortable.transform), transition: sortable.transition }}
       data-card-id={card.id}
-      {...draggable.listeners}
+      {...sortable.listeners}
     >
       {/* The tile is the drag source, the button inside it the way in: a press that doesn't move
           past the sensors' thresholds never starts a drag, so it lands here as a plain click. */}
