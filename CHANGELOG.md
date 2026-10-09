@@ -3,6 +3,19 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.0]
+
+### Added
+
+- In edit mode, drag a column by the grip beside its name to move it anywhere on the board (mouse, or a short press on touch). Move left / Move right in the column's menu still work, and remain the keyboard way.
+
+### Changed
+
+- Dragging shows where things will land: the other cards (or columns) slide aside, and a faded copy of what you're dragging sits in the gap. A card dragged over another column moves into it on screen straight away, and goes back if the drag is cancelled with Esc. This replaces the bar and outline that marked the drop target.
+- Let go of a card below a column's last card, even well below the column itself, and it goes into that column. Let go of it in the gap between columns and it lands where its faded copy is.
+- A card dropped below the last card a label filter shows goes right after that card, instead of after every hidden card too.
+- A moved column lands on screen straight away instead of after the server answers, as a moved card already did.
+
 ## [0.1.1]
 
 ### Fixed
